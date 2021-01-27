@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30711.63
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XRedis", "XRedis\XRedis.csproj", "{D35F9811-5F5F-40E4-A1A3-FAF1C4ED321B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D35F9811-5F5F-40E4-A1A3-FAF1C4ED321B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D35F9811-5F5F-40E4-A1A3-FAF1C4ED321B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D35F9811-5F5F-40E4-A1A3-FAF1C4ED321B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D35F9811-5F5F-40E4-A1A3-FAF1C4ED321B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {65BDD4BE-5C32-463E-80B8-682DD8475384}
+	EndGlobalSection
+EndGlobal
