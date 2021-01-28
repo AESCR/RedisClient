@@ -53,26 +53,28 @@ namespace XRedis
         {
             return Guid.NewGuid().ToString("N");
         }
-
+        /// <summary>
+        /// 如果 key 已经保存了一个值，那么这个操作会直接覆盖原来的值
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="val"></param>
+        /// <returns></returns>
+        public bool Set(string key, string val)
+        {
+            return _redisSocket.SendCommandStatusReply(key, val);
+        }
         public bool SetNx(string key, string str)
         {
             throw new NotImplementedException();
         }
 
-        public bool Expire(string key, in TimeSpan timeSpan)
-        {
-            throw new NotImplementedException();
-        }
+     
 
         public bool HSetNx(string key, string filed, string str)
         {
             throw new NotImplementedException();
         }
 
-        public string HMSet(string key, Dictionary<string, string> result)
-        {
-            throw new NotImplementedException();
-        }
         protected virtual void Dispose(bool disposing)
         {
             if (!_disposedValue)
@@ -125,12 +127,12 @@ namespace XRedis
 
         public string SendCommand(string command, params string[] args)
         {
-            return _redisSocket.SendCommandAnswer(command, args);
+            return _redisSocket.SendCommandBulkReply(command, args);
         }
 
         public bool Auth(string password)
         {
-            if (_redisSocket.SendCommandAnswerOk("Auth", password)==false)
+            if (_redisSocket.SendCommandStatusReply("Auth", password)==false)
             {
                 _redisSocket.Close();
                 return false;
@@ -143,17 +145,17 @@ namespace XRedis
         }
         public string Echo(string message)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandBulkReply("Echo", message);
         }
 
         public string Ping()
         {
-            return _redisSocket.SendCommandAnswer("PING", GetUniqueKey());
+            return _redisSocket.SendCommandBulkReply("PING", GetUniqueKey());
         }
 
         public bool Quit()
         {
-            if (_redisSocket.SendCommandAnswerOk("QUIT"))
+            if (_redisSocket.SendCommandStatusReply("QUIT"))
             {
                 _redisSocket.Close();
             }
@@ -162,44 +164,48 @@ namespace XRedis
 
         public bool Select(int index)
         {
-            return _redisSocket.SendCommandAnswerOk("SELECT",index.ToString());
+            return _redisSocket.SendCommandStatusReply("SELECT",index.ToString());
         }
 
         public int Del(params string[] keys)
         {
-            return _redisSocket.SendCommandAnswerInt("DEL", keys);
+            return _redisSocket.SendCommandIntegerReply("DEL", keys);
         }
 
         public bool Exists(string key)
         {
-            return _redisSocket.SendCommandAnswerInt("EXISTS", key)==1;
+            return _redisSocket.SendCommandIntegerReply("EXISTS", key)==1;
         }
 
         public long Exists(string[] keys)
         {
             throw new NotImplementedException();
         }
-
-        public bool Expire(string key, TimeSpan expiration)
-        {
-            throw new NotImplementedException();
-        }
-
+        /// <summary>
+        ///  以秒为单位设置 key 的生存时间
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="seconds"></param>
+        /// <returns></returns>
         public bool Expire(string key, int seconds)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandIntegerReply("EXPIRE ", seconds.ToString()) == 1;
         }
-
-        public bool ExpireAt(string key, DateTime expirationDate)
+        /// <summary>
+        /// 以毫秒为单位设置 key 的生存时间
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="milliseconds"></param>
+        /// <returns></returns>
+        public bool PExpire(string key, int milliseconds)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandIntegerReply("PEXPIRE ", milliseconds.ToString()) == 1;
         }
-
-        public bool ExpireAt(string key, int timestamp)
+        public bool Expire(string key, TimeSpan timeSpan)
         {
-            throw new NotImplementedException();
+            var ms = timeSpan.Milliseconds;
+            return PExpire(key, ms);
         }
-
         public string[] Keys(string pattern)
         {
             throw new NotImplementedException();

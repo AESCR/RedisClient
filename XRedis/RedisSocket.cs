@@ -37,15 +37,15 @@ namespace XRedis
         /// <param name="cmd"></param>
         /// <param name="args"></param>
         /// <returns></returns>
-        public void SendCommand(string cmd, params object[] args)
+        public void SendCommand(string cmd, params string[] args)
         {
             if (socket == null)
                 throw new NullReferenceException(nameof(socket));
             string resp= "*" + (1 + args.Length)+Environment.NewLine;
             resp += "$" + cmd.Length + Environment.NewLine + cmd + Environment.NewLine;
-            foreach (object arg in args)
+            foreach (string arg in args)
             {
-                string argStr = arg.ToString();
+                string argStr = arg;
                 int argStrLength = Encoding.UTF8.GetByteCount(argStr);
                 resp += "$" + argStrLength + Environment.NewLine + argStr + Environment.NewLine;
             }
@@ -62,52 +62,121 @@ namespace XRedis
             }
         }
 
-        public string SendCommandAnswer(string cmd, params string[] args)
+        public string SendCommandBulkReply(string cmd, params string[] args)
         {
              SendCommand(cmd, args);
-             return ParseResponse();
+             return BulkReply();
         }
-
-        public bool SendCommandAnswerOk(string cmd, params string[] args)
+        public string[] SendCommandMultiBulkReply(string cmd, params string[] args)
         {
             SendCommand(cmd, args);
-            return ParseResponse()=="OK";
+            return MultiBulkReply();
         }
-        public int SendCommandAnswerInt(string cmd, params string[] args)
+        public bool SendCommandStatusReply(string cmd, params string[] args)
         {
             SendCommand(cmd, args);
-            var c= bstream.ReadByte();
-            return Convert.ToInt32(ReadLine());
+            return StatusReply()=="OK";
+        }
+        public int SendCommandIntegerReply(string cmd, params string[] args)
+        {
+            SendCommand(cmd, args);
+            return IntegerReply();
         }
         /// <summary>
-        /// 解析redis回类型
+        /// 状态回复（status reply）的第一个字节是 "+"，例如+OK\r\n
         /// </summary>
-        public string ParseResponse()
+        /// <returns></returns>
+        private string StatusReply()
         {
             if (IsConnected)
             {
                 int c = bstream.ReadByte();
-                switch (c)
+                if (c== '+')
                 {
-                    // 状态回复
-                    case '+':
-                        break;
-                    // 错误回复
-                    case '-':
-                        break;
-                    // 整数回复
-                    case ':':
-                        break;
-                    // 批量回复
-                    case '$': // $后面跟数据字节数(长度)
-                        break;
-                    // 多条批量回复
-                    case '*': // *表示后面有多少个参数
-                        break;
+                    return ReadLine();
                 }
-                return ReadLine();
             }
             return string.Empty;
+        }
+        /// <summary>
+        /// 错误回复（error reply）的第一个字节是 "-"，例如-No such key\r\n
+        /// </summary>
+        /// <returns></returns>
+        public string ErrorReply()
+        {
+            if (IsConnected)
+            {
+                int c = bstream.ReadByte();
+                if (c == '-')
+                {
+                    return ReadLine();
+                }
+            }
+            return string.Empty;
+        }
+        /// <summary>
+        /// 整数回复（integer reply）的第一个字节是 ":"，例如:1\r\n
+        /// </summary>
+        /// <returns></returns>
+        private int IntegerReply()
+        {
+            if (IsConnected)
+            {
+                int c = bstream.ReadByte();
+                if (c == ':')
+                {
+                    return Convert.ToInt32(ReadLine());
+                }
+            }
+            return 0;
+        }
+
+        public string BulkReply()
+        {
+            if (IsConnected)
+            {
+                int c = bstream.ReadByte();
+                if (c == '$')
+                {
+                    return ParseBulkReply();
+                }
+            }
+            return string.Empty;
+        }
+
+        public string[] MultiBulkReply()
+        {
+            if (IsConnected)
+            {
+                int c = bstream.ReadByte();
+                if (c == '*')
+                {
+                    return ParseMultiBulkReply();
+                }
+            }
+            return new string[0];
+        }
+        private string[] ParseMultiBulkReply()
+        {
+            int r = Convert.ToInt32(ReadLine());
+            string[] result=new string[r];
+            for (int i = 0; i < r; i++)
+            {
+                int c = bstream.ReadByte();
+                if (c=='$')
+                {
+                    result[i]=ParseBulkReply();
+                    continue;
+                }
+                throw new Exception("批量回复预期返回值错误");
+            }
+         
+            return result;
+        }
+        private string ParseBulkReply()
+        {
+            int r = Convert.ToInt32(ReadLine());
+            return Read(r);
         }
 
         public void Close()
@@ -127,6 +196,19 @@ namespace XRedis
             bstream = null;
         }
 
+        string Read(int len)
+        {
+            byte[] bytes = new byte[len];
+            bstream.Read(bytes, 0, bytes.Length);
+            var nL=Environment.NewLine.Length;
+            byte[] newline=new byte[nL];
+            bstream.Read(newline, 0, newline.Length);
+            if (Encoding.UTF8.GetString(newline)== Environment.NewLine)
+            {
+                return Encoding.UTF8.GetString(bytes);
+            }
+            throw new Exception("批量读取长度异常！");
+        }
         string ReadLine()
         {
             StringBuilder sb = new StringBuilder();
@@ -141,5 +223,6 @@ namespace XRedis
             }
             return sb.ToString();
         }
+
     }
 }
