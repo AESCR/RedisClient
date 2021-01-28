@@ -30,6 +30,8 @@ using System.Collections.Generic;
 using System.Linq;
 using XRedis;
 
+#if false
+    
 namespace Common.Utility.Memory.Redis2
 {
     public class RedisCache : IRedisCache
@@ -359,3 +361,4 @@ namespace Common.Utility.Memory.Redis2
         }
     }
 }
+#endif

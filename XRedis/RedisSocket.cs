@@ -6,20 +6,23 @@ using System.Text;
 
 namespace XRedis
 {
-    internal class RedisSocket
+    internal class RedisSocket:IDisposable
     {
         Socket socket;
         BufferedStream bstream;
-        private string Host;
-        private int Port;
-        private int SendTimeout;
 
-        void Connect()
+        public bool IsConnected => socket?.Connected??false;
+
+        public void Connect(string host, int port, int sendTimeout)
         {
+            if (socket!=null)
+            {
+                Close();
+            }
             socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             socket.NoDelay = true;
-            socket.SendTimeout = SendTimeout;
-            socket.Connect(Host, Port);
+            socket.SendTimeout = sendTimeout;
+            socket.Connect(host, port);
             if (!socket.Connected)
             {
                 socket.Close();
@@ -34,14 +37,10 @@ namespace XRedis
         /// <param name="cmd"></param>
         /// <param name="args"></param>
         /// <returns></returns>
-        public bool SendCommand(string cmd, params object[] args)
+        public void SendCommand(string cmd, params object[] args)
         {
-            if (socket==null)
-            {
-                Connect();
-            }
             if (socket == null)
-                return false;
+                throw new NullReferenceException(nameof(socket));
             string resp= "*" + (1 + args.Length)+Environment.NewLine;
             resp += "$" + cmd.Length + Environment.NewLine + cmd + Environment.NewLine;
             foreach (object arg in args)
@@ -59,44 +58,88 @@ namespace XRedis
             {
                 socket.Close();
                 socket = null;
-                return false;
+                throw new Exception("发送Send命令失败！");
             }
-            return true;
         }
 
+        public string SendCommandAnswer(string cmd, params string[] args)
+        {
+             SendCommand(cmd, args);
+             return ParseResponse();
+        }
+
+        public bool SendCommandAnswerOk(string cmd, params string[] args)
+        {
+            SendCommand(cmd, args);
+            return ParseResponse()=="OK";
+        }
+        public int SendCommandAnswerInt(string cmd, params string[] args)
+        {
+            SendCommand(cmd, args);
+            var c= bstream.ReadByte();
+            return Convert.ToInt32(ReadLine());
+        }
         /// <summary>
         /// 解析redis回类型
         /// </summary>
-        public void ParseResponse()
+        public string ParseResponse()
         {
-            int c = bstream.ReadByte();
-            switch (c)
+            if (IsConnected)
             {
-                // 状态回复
-                case '+':
-                    break;
-                // 错误回复
-                case '-':
-                    break;
-                // 整数回复
-                case ':':
-                    break;
-                // 批量回复
-                case '$': // $后面跟数据字节数(长度)
-                    break;
-                // 多条批量回复
-                case '*': // *表示后面有多少个参数
-                    break;
+                int c = bstream.ReadByte();
+                switch (c)
+                {
+                    // 状态回复
+                    case '+':
+                        break;
+                    // 错误回复
+                    case '-':
+                        break;
+                    // 整数回复
+                    case ':':
+                        break;
+                    // 批量回复
+                    case '$': // $后面跟数据字节数(长度)
+                        break;
+                    // 多条批量回复
+                    case '*': // *表示后面有多少个参数
+                        break;
+                }
+                return ReadLine();
             }
+            return string.Empty;
         }
 
         public void Close()
         {
-            if (socket!=null)
+            socket?.Close();
+            socket?.Dispose();
+            bstream?.Dispose();
+            socket = null;
+            bstream = null;
+        }
+        public void Dispose()
+        {
+            socket?.Close();
+            socket?.Dispose();
+            bstream?.Dispose();
+            socket = null;
+            bstream = null;
+        }
+
+        string ReadLine()
+        {
+            StringBuilder sb = new StringBuilder();
+            int c;
+            while ((c = bstream.ReadByte()) != -1)
             {
-                socket.Close();
-                socket = null;
+                if (c == '\r')
+                    continue;
+                if (c == '\n')
+                    break;
+                sb.Append((char)c);
             }
+            return sb.ToString();
         }
     }
 }
