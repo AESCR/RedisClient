@@ -191,21 +191,6 @@ namespace XRedis
         {
             return _redisSocket.SendCommandIntegerReply("EXPIRE ", seconds.ToString()) == 1;
         }
-        /// <summary>
-        /// 以毫秒为单位设置 key 的生存时间
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="milliseconds"></param>
-        /// <returns></returns>
-        public bool PExpire(string key, int milliseconds)
-        {
-            return _redisSocket.SendCommandIntegerReply("PEXPIRE ", milliseconds.ToString()) == 1;
-        }
-        public bool Expire(string key, TimeSpan timeSpan)
-        {
-            var ms = timeSpan.Milliseconds;
-            return PExpire(key, ms);
-        }
         public string[] Keys(string pattern)
         {
             throw new NotImplementedException();
@@ -228,7 +213,7 @@ namespace XRedis
 
         public string RandomKey()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandBulkReply("RANDOMKEY");
         }
 
         public string Rename(string key, string newKey)
@@ -248,7 +233,7 @@ namespace XRedis
 
         public string Type(string key)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandStringReply("TYPE", key);
         }
 
         protected virtual void OnConnected()

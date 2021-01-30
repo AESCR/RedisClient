@@ -61,7 +61,6 @@ namespace XRedis
                 throw new Exception("发送Send命令失败！");
             }
         }
-
         public string SendCommandBulkReply(string cmd, params string[] args)
         {
              SendCommand(cmd, args);
@@ -76,6 +75,11 @@ namespace XRedis
         {
             SendCommand(cmd, args);
             return StatusReply()=="OK";
+        }
+        public string SendCommandStringReply(string cmd, params string[] args)
+        {
+            SendCommand(cmd, args);
+            return StatusReply();
         }
         public int SendCommandIntegerReply(string cmd, params string[] args)
         {
@@ -178,7 +182,6 @@ namespace XRedis
             int r = Convert.ToInt32(ReadLine());
             return Read(r);
         }
-
         public void Close()
         {
             socket?.Close();
@@ -205,7 +208,12 @@ namespace XRedis
             bstream.Read(newline, 0, newline.Length);
             if (Encoding.UTF8.GetString(newline)== Environment.NewLine)
             {
-                return Encoding.UTF8.GetString(bytes);
+                var result = Encoding.UTF8.GetString(bytes);
+                if (result== "nil ")
+                {
+                    return String.Empty;
+                }
+                return result;
             }
             throw new Exception("批量读取长度异常！");
         }
@@ -223,6 +231,5 @@ namespace XRedis
             }
             return sb.ToString();
         }
-
     }
 }

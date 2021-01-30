@@ -46,9 +46,21 @@ namespace XRedisTest
                 var result = _redisClient.Ping();
                 Console.WriteLine(result);
             }
-          
-            //Assert.e(result);
         }
 
+        [TestMethod]
+        public void TestRANDOMKEY()
+        {
+            var KEY = _redisClient.RandomKey();
+            var result= _redisClient.Exists(KEY);
+            Assert.IsTrue(result);
+        }
+        [TestMethod]
+        public void TestType()
+        {
+            var key = _redisClient.RandomKey();
+            var result = _redisClient.Type(key);
+            Console.WriteLine(result);
+        }
     }
 }
