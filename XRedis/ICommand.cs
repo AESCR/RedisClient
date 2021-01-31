@@ -4,7 +4,7 @@ using System.Text;
 
 namespace XRedis
 {
-    public interface IRedisClient : IDisposable
+    public interface ICommand : IDisposable
     {
         #region Redis 键(key) 命令
 
@@ -27,9 +27,9 @@ namespace XRedis
         /// 设置 key 过期时间的时间戳(unix timestamp) 以毫秒计
         /// </summary>
         /// <param name="key">键</param>
-        /// <param name="milliseconds">UNIX 时间戳</param>
+        /// <param name="timestamp">UNIX 时间戳</param>
         /// <returns>设置成功返回 1 。 当 key 不存在或者不能为 key 设置过期时间时(比如在低于 2.1.3 版本的 Redis 中你尝试更新 key 的过期时间)返回 0 。</returns>
-        int PExpireAt(string key, int milliseconds);
+        int PExpireAt(string key, long timestamp);
 
         /// <summary>
         /// 修改 key 的名称
@@ -117,7 +117,7 @@ namespace XRedis
         /// <param name="key">键</param>
         /// <param name="second">UNIX 时间戳</param>
         /// <returns>设置成功返回 1 。 当 key 不存在或者不能为 key 设置过期时间时(比如在低于 2.1.3 版本的 Redis 中你尝试更新 key 的过期时间)返回 0 。</returns>
-        int ExpireAt(string key, int second);
+        int ExpireAt(string key, long timestamp);
 
         /// <summary>
         /// 用于查找所有符合给定模式 pattern 的 key 。。
@@ -348,11 +348,10 @@ namespace XRedis
         /// <summary>
         /// 移出并获取列表的第一个元素， 如果列表没有元素会阻塞列表直到等待超时或发现可弹出元素为止。
         /// </summary>
-        /// <param name="value">被弹出元素的值</param>
         /// <param name="timeout">等待超时</param>
-        /// <param name="key">被弹出元素所属的 key</param>
+        /// <param name="key">被弹出列表所属的 key</param>
         /// <returns>如果列表为空，返回一个 nil 。 否则，返回一个含有两个元素的列表，第一个元素是被弹出元素所属的 key ，第二个元素是被弹出元素的值。</returns>
-        string[] BlPop(string value, int timeout, params string[] key);
+        string[] BlPop(string[] key,int timeout );
 
         /// <summary>
         /// 移出并获取列表的最后一个元素， 如果列表没有元素会阻塞列表直到等待超时或发现可弹出元素为止。
@@ -361,16 +360,16 @@ namespace XRedis
         /// <param name="timeout">等待时长</param>
         /// <param name="keys">被弹出元素所属的 key </param>
         /// <returns>假如在指定时间内没有任何元素被弹出，则返回一个 nil 和等待时长。 反之，返回一个含有两个元素的列表</returns>
-        string[] BrPop(string value, int timeout, params string[] keys);
+        string[] BrPop(string[] keys, int timeout);
 
         /// <summary>
         /// 从列表中弹出一个值，将弹出的元素插入到另外一个列表中并返回它； 如果列表没有元素会阻塞列表直到等待超时或发现可弹出元素为止。
         /// </summary>
         /// <param name="key">键</param>
-        /// <param name="value">被弹出元素的值</param>
+        /// <param name="newKey">另外一个列表</param>
         /// <param name="timeout">等待时长</param>
         /// <returns>假如在指定时间内没有任何元素被弹出，则返回一个 nil 和等待时长。 反之，返回一个含有两个元素的列表</returns>
-        string[] BrPopLPush(string key, string value, int timeout);
+        string[] BrPopLPush(string key, string newKey, int timeout);
 
         /// <summary>
         /// 移除列表元素
@@ -718,9 +717,45 @@ namespace XRedis
         /// <param name="max">在有序集合中分数排名较大的成员</param>
         /// <returns>有序集合中成员名称 min 和 max 之间的成员数量; Integer类型。</returns>
         int ZLexCount(string key, string min, string max);
-        //todo https://www.redis.net.cn/order/
-        // int ZUnionStore(string destination,int numkeys,);
+        /// <summary>
+        /// 用于移除有序集中，指定排名(rank)区间内的所有成员。
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="start"></param>
+        /// <param name="stop"></param>
+        /// <returns>被移除成员的数量。</returns>
+        int ZRemRangeByRank(string key,int start,int stop);
+        /// <summary>
+        /// 用于计算集合中元素的数量
+        /// </summary>
+        /// <param name="key">键</param>
+        /// <returns>当 key 存在且是有序集类型时，返回有序集的基数。 当 key 不存在时，返回 0 。</returns>
+        int ZCard(string key);
+        /// <summary>
+        /// 用于移除有序集中的一个或多个成员，不存在的成员将被忽略
+        /// </summary>
+        /// <param name="key">当 key 存在但不是有序集类型时，返回一个错误。</param>
+        /// <param name="member"> 在 Redis 2.4 版本以前， ZREM 每次只能删除一个元素。</param>
+        /// <returns>被成功移除的成员的数量，不包括被忽略的成员</returns>
+        int ZRem(string key,params string[] member);
+ 
+        /// <summary>
+        /// 返回有序集中指定成员的排名。其中有序集成员按分数值递增(从小到大)顺序排列。
+        /// </summary>
+        /// <param name="key">键</param>
+        /// <param name="member"></param>
+        /// <returns>如果成员是有序集 key 的成员，返回 member 的排名。 如果成员不是有序集 key 的成员，返回 nil 。</returns>
+        int ZRank(string key,string member);
+        /// <summary>
+        /// 对有序集合中指定成员的分数加上增量 increment
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="increment">增量  递一个负数值 increment ，让分数减去相应的值</param>
+        /// <param name="member"></param>
+        /// <returns>member 成员的新分数值，以字符串形式表示。</returns>
+        string ZIncrBy(string key,int increment, string member);
 
+        //TODO Redis Zunionstore 命令 Redis Zinterstore 命令 ZRangeByScore
         #endregion
 
         #region Redis 连接 命令
@@ -789,7 +824,7 @@ namespace XRedis
         /// </summary>
         /// <param name="parameters"></param>
         /// <returns>取决于不同命令，返回不同的值。</returns>
-        string[] ShowLog(params string[] parameters);
+        string ShowLog(params string[] parameters);
 
         /// <summary>
         /// 返回最近一次 Redis 成功将数据保存到磁盘上的时间，以 UNIX 时间戳格式表示。
@@ -1012,7 +1047,7 @@ namespace XRedis
         /// r : 客户端套接字（在事件 loop 中）是可读的（readable）
         /// w : 客户端套接字（在事件 loop 中）是可写的（writeable）
         /// </returns>
-        string[] ClientList();
+        string ClientList();
         /// <summary>
         /// 用于指定当前连接的名称。
         /// </summary>

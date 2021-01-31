@@ -10,26 +10,53 @@ namespace XRedis
     {
         Socket socket;
         BufferedStream bstream;
-
-        public bool IsConnected => socket?.Connected??false;
-
-        public void Connect(string host, int port, int sendTimeout)
+        public string Host { get; private set; }
+        public int Port { get; private set; }
+        private readonly string _password;
+        public int SendTimeout
         {
-            if (socket!=null)
+            get => _sendTimeout;
+            set
             {
-                Close();
+                _sendTimeout = value;
+                if (IsConnected)
+                {
+                    socket.SendTimeout = _sendTimeout;
+                }
             }
-            socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            socket.NoDelay = true;
-            socket.SendTimeout = sendTimeout;
-            socket.Connect(host, port);
+        }
+
+        private int _sendTimeout  = 1000;
+        public bool IsConnected => socket?.Connected??false;
+        public RedisSocket(string host, int port, string password)
+        {
+            Host = host;
+            Port = port;
+            _password = password;
+        }
+        void Connect()
+        {
+            if (IsConnected) return;
+            Close();
+            socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+            {
+                NoDelay = true, SendTimeout = _sendTimeout
+            };
+            socket.Connect(Host, Port);
             if (!socket.Connected)
             {
                 socket.Close();
                 socket = null;
                 return;
             }
+
             bstream = new BufferedStream(new NetworkStream(socket), 16 * 1024);
+            if (string.IsNullOrEmpty(_password) != false) return;
+            var result = SendCommandString("AUTH", _password);
+            if (result != "OK")
+            {
+                throw new Exception("redis 密码错误！");
+            }
         }
         /// <summary>
         /// redis命令发送格式 https://segmentfault.com/a/1190000011145207
@@ -37,8 +64,9 @@ namespace XRedis
         /// <param name="cmd"></param>
         /// <param name="args"></param>
         /// <returns></returns>
-        public void SendCommand(string cmd, params string[] args)
+        void SendCommand(string cmd, params string[] args)
         {
+            Connect();
             if (socket == null)
                 throw new NullReferenceException(nameof(socket));
             string resp= "*" + (1 + args.Length)+Environment.NewLine;
@@ -61,127 +89,37 @@ namespace XRedis
                 throw new Exception("发送Send命令失败！");
             }
         }
-        public string SendCommandBulkReply(string cmd, params string[] args)
+        public string SendCommandString(string cmd, params string[] args)
         {
              SendCommand(cmd, args);
-             return BulkReply();
+             var resp= ParseResp();
+             if (resp is string result)
+             {
+                 return result;
+             }
+             throw new Exception("返回意料之外的值");
         }
-        public string[] SendCommandMultiBulkReply(string cmd, params string[] args)
+        public string[] SendCommandArray(string cmd, params string[] args)
         {
             SendCommand(cmd, args);
-            return MultiBulkReply();
+            var resp = ParseResp();
+            if (resp is string[] result)
+            {
+                return result;
+            }
+            throw new Exception("返回意料之外的值");
         }
-        public bool SendCommandStatusReply(string cmd, params string[] args)
+        public int SendCommandInt(string cmd, params string[] args)
         {
             SendCommand(cmd, args);
-            return StatusReply()=="OK";
-        }
-        public string SendCommandStringReply(string cmd, params string[] args)
-        {
-            SendCommand(cmd, args);
-            return StatusReply();
-        }
-        public int SendCommandIntegerReply(string cmd, params string[] args)
-        {
-            SendCommand(cmd, args);
-            return IntegerReply();
-        }
-        /// <summary>
-        /// 状态回复（status reply）的第一个字节是 "+"，例如+OK\r\n
-        /// </summary>
-        /// <returns></returns>
-        private string StatusReply()
-        {
-            if (IsConnected)
+            var resp = ParseResp();
+            if (resp is int result)
             {
-                int c = bstream.ReadByte();
-                if (c== '+')
-                {
-                    return ReadLine();
-                }
+                return result;
             }
-            return string.Empty;
+            throw new Exception("返回意料之外的值");
         }
-        /// <summary>
-        /// 错误回复（error reply）的第一个字节是 "-"，例如-No such key\r\n
-        /// </summary>
-        /// <returns></returns>
-        public string ErrorReply()
-        {
-            if (IsConnected)
-            {
-                int c = bstream.ReadByte();
-                if (c == '-')
-                {
-                    return ReadLine();
-                }
-            }
-            return string.Empty;
-        }
-        /// <summary>
-        /// 整数回复（integer reply）的第一个字节是 ":"，例如:1\r\n
-        /// </summary>
-        /// <returns></returns>
-        private int IntegerReply()
-        {
-            if (IsConnected)
-            {
-                int c = bstream.ReadByte();
-                if (c == ':')
-                {
-                    return Convert.ToInt32(ReadLine());
-                }
-            }
-            return 0;
-        }
-
-        public string BulkReply()
-        {
-            if (IsConnected)
-            {
-                int c = bstream.ReadByte();
-                if (c == '$')
-                {
-                    return ParseBulkReply();
-                }
-            }
-            return string.Empty;
-        }
-
-        public string[] MultiBulkReply()
-        {
-            if (IsConnected)
-            {
-                int c = bstream.ReadByte();
-                if (c == '*')
-                {
-                    return ParseMultiBulkReply();
-                }
-            }
-            return new string[0];
-        }
-        private string[] ParseMultiBulkReply()
-        {
-            int r = Convert.ToInt32(ReadLine());
-            string[] result=new string[r];
-            for (int i = 0; i < r; i++)
-            {
-                int c = bstream.ReadByte();
-                if (c=='$')
-                {
-                    result[i]=ParseBulkReply();
-                    continue;
-                }
-                throw new Exception("批量回复预期返回值错误");
-            }
-         
-            return result;
-        }
-        private string ParseBulkReply()
-        {
-            int r = Convert.ToInt32(ReadLine());
-            return Read(r);
-        }
+        
         public void Close()
         {
             socket?.Close();
@@ -201,6 +139,10 @@ namespace XRedis
 
         string Read(int len)
         {
+            if (len<0)
+            {
+                return String.Empty;
+            }
             byte[] bytes = new byte[len];
             bstream.Read(bytes, 0, bytes.Length);
             var nL=Environment.NewLine.Length;
@@ -209,7 +151,7 @@ namespace XRedis
             if (Encoding.UTF8.GetString(newline)== Environment.NewLine)
             {
                 var result = Encoding.UTF8.GetString(bytes);
-                if (result== "nil ")
+                if (result== "nil")
                 {
                     return String.Empty;
                 }
@@ -230,6 +172,49 @@ namespace XRedis
                 sb.Append((char)c);
             }
             return sb.ToString();
+        }
+
+        object ParseResp()
+        {
+            if (IsConnected)
+            {
+                int c = bstream.ReadByte();
+                switch (c)
+                {
+                    case '+':
+                        return ReadLine();
+                    case '-':
+                        return ReadLine();
+                    case ':':
+                        return Convert.ToInt32(ReadLine());
+                    case '$':
+                        return ParseBulkReply();
+                    case '*':
+                        return ParseMultiBulkReply();
+                }
+            }
+            throw new Exception("redis 已断开连接，不可读取响应信息");
+        }
+        private string[] ParseMultiBulkReply()
+        {
+            int r = Convert.ToInt32(ReadLine());
+            string[] result = new string[r];
+            for (int i = 0; i < r; i++)
+            {
+                int c = bstream.ReadByte();
+                if (c == '$')
+                {
+                    result[i] = ParseBulkReply();
+                    continue;
+                }
+                throw new Exception("批量回复预期返回值错误");
+            }
+            return result;
+        }
+        private string ParseBulkReply()
+        {
+            int r = Convert.ToInt32(ReadLine());
+            return Read(r);
         }
     }
 }

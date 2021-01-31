@@ -8,59 +8,29 @@ namespace XRedisTest
     public class UnitTest1
     {
         private readonly RedisClient _redisClient = new RedisClient("121.36.213.19",6380, "redis@2020");
-        [TestMethod]
-        public void TestConnected()
-        {
-            _redisClient.Connect(1000);
-            Assert.IsTrue(_redisClient.IsConnected);
-        }
-        [TestMethod]
-        public void TestQuit()
-        {
-            _redisClient.Quit();
-            Assert.IsFalse(_redisClient.IsConnected);
-        }
-        [TestMethod]
-        public void TestSelectDb()
-        {
-            var result= _redisClient.Select(1);
-            Assert.IsTrue(result);
-        }
-        [TestMethod]
-        public void TestDel()
-        {
-            var result = _redisClient.Del("03cd7048f76649a88ab01d9c1c80108f");
-            //Assert.e(result);
-        }
-        [TestMethod]
-        public void TestExist()
-        {
-            var result = _redisClient.Exists("03cd7048f76649a88ab01d9c1c80108f");
-            //Assert.e(result);
-        }
-        [TestMethod]
-        public void TestPing()
-        {
-            for (int i = 0; i < 10; i++)
-            {
-                var result = _redisClient.Ping();
-                Console.WriteLine(result);
-            }
-        }
 
-        [TestMethod]
-        public void TestRANDOMKEY()
+        public UnitTest1()
         {
-            var KEY = _redisClient.RandomKey();
-            var result= _redisClient.Exists(KEY);
-            Assert.IsTrue(result);
+            _redisClient.Select(2);
         }
+        #region  Redis ¼ü(key) ÃüÁî
         [TestMethod]
         public void TestType()
         {
+            var x= _redisClient.Select(2);
             var key = _redisClient.RandomKey();
             var result = _redisClient.Type(key);
             Console.WriteLine(result);
         }
+        [TestMethod]
+        public void TestPexpireat()
+        {
+           var x=  _redisClient.Set("w3ckey", "redis");
+           Assert.AreEqual(x, "OK");
+           var y= _redisClient.PExpireAt("w3ckey", 1612083519000);
+           Assert.AreEqual(y, 1);
+        }
+        #endregion
+
     }
 }
