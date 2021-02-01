@@ -31,9 +31,9 @@ namespace XRedis
             return _redisSocket.SendCommandString("Type", key);
         }
 
-        public int PExpire(string key, int milliseconds)
+        public int PExpire(string key, long milliseconds)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandInt("PExpire", key, milliseconds.ToString());
         }
 
         public int PExpireAt(string key, long timestamp)
@@ -609,17 +609,17 @@ namespace XRedis
 
         public int ZRank(string key, string member)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandInt("ZRank", key,member);
         }
 
         public string ZIncrBy(string key, int increment, string member)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandString("ZRank", key, increment.ToString(), member);
         }
 
         public string Echo(string message)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandString("Echo", message);
         }
 
         public string Select(int index)
@@ -629,72 +629,81 @@ namespace XRedis
 
         public string Ping()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandString("Ping");
         }
 
         public string Quit()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandString("Quit");
         }
 
         public string Auth(string password)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandString("Auth",password);
         }
 
-        public string Pause(int timeout)
+        public string Pause(long timeout)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandString("Pause", timeout.ToString());
         }
 
         public string DebugObject(string key)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandString("DEBUG OBJECT", key);
         }
 
         public string FlushDb()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandString("FlushDb");
         }
 
         public string Save()
         {
-            throw new NotImplementedException();
-        }
-
-        public string ShowLog(params string[] parameters)
-        {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandString("Save");
         }
 
         public string LastSave()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandString("LastSave");
         }
 
         public Dictionary<string, string> ConfigGet(string parameters)
         {
-            throw new NotImplementedException();
+            Dictionary<string, string> dic=new Dictionary<string, string>();
+            var result= _redisSocket.SendCommandArray("Config Get", parameters);
+            for (int i = 0; i < result.Length;)
+            {
+                dic.Add(result[i],result[i+1]);
+                i = i + 2;
+            }
+            return dic;
         }
 
         public Dictionary<string, string> ConfigGet()
         {
-            throw new NotImplementedException();
+            Dictionary<string, string> dic = new Dictionary<string, string>();
+            var result = _redisSocket.SendCommandArray("Config Get");
+            for (int i = 0; i < result.Length;)
+            {
+                dic.Add(result[i], result[i + 1]);
+                i += 2;
+            }
+            return dic;
         }
 
         public string[] Command()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandArray("Command");
         }
 
         public string SlaveOf(string host, int port)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandString("SLAVEOF",host,port.ToString());
         }
 
         public string SlaveOf()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandString("SLAVEOF", "NO", "ONE");
         }
 
         public void DebugSegfault()

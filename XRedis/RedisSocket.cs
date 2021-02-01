@@ -8,6 +8,9 @@ namespace XRedis
 {
     internal class RedisSocket:IDisposable
     {
+        /// <summary>
+        /// 运行返回错误信息
+        /// </summary>
         public bool AllowError { get; set; } = false;
         Socket socket;
         BufferedStream bstream;

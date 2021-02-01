@@ -21,7 +21,7 @@ namespace XRedis
         /// <param name="key">键</param>
         /// <param name="milliseconds">毫秒计</param>
         /// <returns>设置成功返回 1 。 当 key 不存在或者不能为 key 设置过期时间时(比如在低于 2.1.3 版本的 Redis 中你尝试更新 key 的过期时间)返回 0 。</returns>
-        int PExpire(string key, int milliseconds);
+        int PExpire(string key, long milliseconds);
 
         /// <summary>
         /// 设置 key 过期时间的时间戳(unix timestamp) 以毫秒计
@@ -801,7 +801,7 @@ namespace XRedis
         /// </summary>
         /// <param name="timeout">毫秒</param>
         /// <returns>返回 OK。如果 timeout 参数是非法的返回错误。</returns>
-        string Pause(int timeout);
+        string Pause(long timeout);
 
         /// <summary>
         /// 获取 key 的调试信息  命令是一个调试命令，它不应被客户端所使用。
@@ -822,12 +822,7 @@ namespace XRedis
         /// <returns>保存成功时返回 OK 。</returns>
         string Save();
 
-        /// <summary>
-        /// 用来记录查询执行时间的日志系统。
-        /// </summary>
-        /// <param name="parameters"></param>
-        /// <returns>取决于不同命令，返回不同的值。</returns>
-        string ShowLog(params string[] parameters);
+      
 
         /// <summary>
         /// 返回最近一次 Redis 成功将数据保存到磁盘上的时间，以 UNIX 时间戳格式表示。
