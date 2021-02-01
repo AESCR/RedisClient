@@ -600,8 +600,12 @@ namespace XRedis
         /// 该操作和 SPOP 相似，但 SPOP 将随机元素从集合中移除并返回，而 Srandmember 则仅仅返回随机元素，而不对集合进行任何改动。
         /// </param>
         /// <returns></returns>
-        string[] SRandMember(string key, int count = 1);
-
+        string[] SRandMember(string key, int count);
+        /// <summary>
+        /// 用于返回集合中的一个随机元素。
+        /// </summary>
+        /// <param name="key">键</param>
+        string SRandMember(string key);
         /// <summary>
         /// 返回集合中的所有的成员。 不存在的集合 key 被视为空集合。
         /// </summary>
@@ -636,10 +640,10 @@ namespace XRedis
         /// <summary>
         /// 将一个或多个成员元素加入到集合中，已经存在于集合的成员元素将被忽略。
         /// </summary>
-        /// <param name="kye">假如集合 key 不存在，则创建一个只包含添加的元素作成员的集合。当集合 key 不是集合类型时，返回一个错误。</param>
+        /// <param name="key">假如集合 key 不存在，则创建一个只包含添加的元素作成员的集合。当集合 key 不是集合类型时，返回一个错误。</param>
         /// <param name="values">注意：在Redis2.4版本以前， SADD 只接受单个成员值</param>
         /// <returns>被添加到集合中的新元素的数量，不包括被忽略的元素。</returns>
-        int SAdd(string kye, params string[] values);
+        int SAdd(string key, params string[] values);
 
         /// <summary>
         /// 判断成员元素是否是集合的成员。
@@ -738,7 +742,6 @@ namespace XRedis
         /// <param name="member"> 在 Redis 2.4 版本以前， ZREM 每次只能删除一个元素。</param>
         /// <returns>被成功移除的成员的数量，不包括被忽略的成员</returns>
         int ZRem(string key,params string[] member);
- 
         /// <summary>
         /// 返回有序集中指定成员的排名。其中有序集成员按分数值递增(从小到大)顺序排列。
         /// </summary>

@@ -10,6 +10,12 @@ namespace XRedis
         private readonly RedisSocket _redisSocket;
         public string Host { get; private set; }
         public int Port { get; private set; }
+        public bool AllowError
+        {
+            get => _redisSocket.AllowError;
+            set => _redisSocket.AllowError = value;
+        }
+
         public bool IsConnected => _redisSocket?.IsConnected ?? false;
         public RedisClient(string host, int port):this(host, port,"")
         {
@@ -343,172 +349,262 @@ namespace XRedis
 
         public int RPushX(string key, params string[] values)
         {
-            throw new NotImplementedException();
+            string[] args = new string[values.Length + 1];
+            args[0] = key;
+            int index = 1;
+            foreach (var value in values)
+            {
+                args[index] = value;
+                index++;
+            }
+            return _redisSocket.SendCommandInt("RPushX", args);
         }
 
         public string HmSet(string key, Dictionary<string, string> kV)
         {
-            throw new NotImplementedException();
+            string[] args = new string[kV.Count*2+1];
+            args[0] = key;
+            int index = 1;
+            foreach (var k in kV.Keys)
+            {
+                args[index] = k;
+                index++;
+                args[index] = kV[k];
+                index++;
+            }
+            return _redisSocket.SendCommandString("HmSet", args);
         }
 
         public string[] HmGet(string key, params string[] fields)
         {
-            throw new NotImplementedException();
+            string[] args = new string[fields.Length + 1];
+            args[0] = key;
+            int index = 1;
+            foreach (var field in fields)
+            {
+                args[index] = field;
+                index++;
+            }
+            return _redisSocket.SendCommandArray("HmGet", args);
         }
 
         public int HSet(string key, string field, string value)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandInt("HSet", key, field, value);
         }
 
         public string[] HGetAll(string key)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandArray("HGetAll", key);
         }
 
         public string HGet(string key, string field)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandString("HSet", key, field);
         }
 
         public int HExists(string key, string field)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandInt("HExists", key, field);
         }
 
         public string HinCrBy(string key, string field, int number)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandString("HinCrBy", key, field, number.ToString());
         }
 
         public int HLen(string key)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandInt("HLen", key);
         }
 
         public int HDel(string key, params string[] fields)
         {
-            throw new NotImplementedException();
+            string[] args = new string[fields.Length + 1];
+            args[0] = key;
+            int index = 1;
+            foreach (var field in fields)
+            {
+                args[index] = field;
+                index++;
+            }
+            return _redisSocket.SendCommandInt("HDel", args);
         }
 
         public string[] HVals(string key)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandArray("HVals", key);
         }
 
         public string HinCrByFloat(string key, string field, float fraction)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandString("HinCrByFloat", key, field, fraction.ToString(CultureInfo.InvariantCulture));
         }
 
         public string[] HKeys(string key)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandArray("HKeys", key);
         }
 
         public int HSetNx(string key, string field, string value)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandInt("HKeys", key);
         }
 
         public string[] SUnion(params string[] keys)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandArray("SUnion", keys);
         }
 
         public int SCard(string key)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandInt("SCard", key);
         }
 
-        public string[] SRandMember(string key, int count = 1)
+        public string[] SRandMember(string key, int count)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandArray("SRandMember", key,count.ToString());
         }
-
+        public string SRandMember(string key)
+        {
+            return _redisSocket.SendCommandString("SRandMember", key);
+        }
         public string[] SMembers(string key)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandArray("SMembers", key);
         }
 
         public string[] SInter(params string[] keys)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandArray("SInter", keys);
         }
 
         public int SRem(string key, params string[] member)
         {
-            throw new NotImplementedException();
+            string[] args = new string[member.Length + 1];
+            args[0] = key;
+            int index = 1;
+            foreach (var field in member)
+            {
+                args[index] = field;
+                index++;
+            }
+            return _redisSocket.SendCommandInt("SRem", args);
         }
 
         public int SMove(string source, string destination, string moveMember)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandInt("SMove", source, destination, moveMember);
         }
 
-        public int SAdd(string kye, params string[] values)
+        public int SAdd(string key, params string[] values)
         {
-            throw new NotImplementedException();
+            string[] args = new string[values.Length + 1];
+            args[0] = key;
+            int index = 1;
+            foreach (var field in values)
+            {
+                args[index] = field;
+                index++;
+            }
+            return _redisSocket.SendCommandInt("SAdd", args);
         }
 
         public int SIsMember(string key, string value)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandInt("SAdd", key, value);
         }
 
         public int SDiffStore(string destination, params string[] keys)
         {
-            throw new NotImplementedException();
+            string[] args = new string[keys.Length + 1];
+            args[0] = destination;
+            int index = 1;
+            foreach (var k in keys)
+            {
+                args[index] = k;
+                index++;
+            }
+            return _redisSocket.SendCommandInt("SDiffStore", args);
         }
 
         public string[] SDiff(params string[] keys)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandArray("SDiff", keys);
         }
 
         public string[] SScan(string key, int cursor, string pattern, int count = 10)
         {
-            throw new NotImplementedException();
+            string[] args = new string[4];
+            args[0] = key;
+            args[1] = cursor.ToString();
+            args[2] = pattern;
+            args[3] = count.ToString();
+            return _redisSocket.SendCommandArray("SScan", args);
         }
 
         public string[] SInterStore(string destination, params string[] keys)
         {
-            throw new NotImplementedException();
+            string[] args = new string[keys.Length + 1];
+            args[0] = destination;
+            int index = 1;
+            foreach (var k in keys)
+            {
+                args[index] = k;
+                index++;
+            }
+            return _redisSocket.SendCommandArray("SInterStore", args);
         }
 
         public int SUnionStore(string destination, params string[] keys)
         {
-            throw new NotImplementedException();
+            string[] args = new string[keys.Length + 1];
+            args[0] = destination;
+            int index = 1;
+            foreach (var k in keys)
+            {
+                args[index] = k;
+                index++;
+            }
+            return _redisSocket.SendCommandInt("SInterStore", args);
         }
 
         public string SPop(string key)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandString("SPop", key);
         }
 
         public string ZRevRank(string key, string member)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandString("ZRevRank", key, member);
         }
 
         public int ZLexCount(string key, string min, string max)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandInt("ZLexCount", key, min, max);
         }
 
         public int ZRemRangeByRank(string key, int start, int stop)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandInt("ZREMRANGEBYRANK", key, start.ToString(), stop.ToString());
         }
 
         public int ZCard(string key)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommandInt("ZCard", key);
         }
 
         public int ZRem(string key, params string[] member)
         {
-            throw new NotImplementedException();
+            string[] args = new string[member.Length + 1];
+            args[0] = key;
+            int index = 1;
+            foreach (var k in member)
+            {
+                args[index] = k;
+                index++;
+            }
+            return _redisSocket.SendCommandInt("ZRem", args);
         }
 
         public int ZRank(string key, string member)

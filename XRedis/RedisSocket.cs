@@ -8,6 +8,7 @@ namespace XRedis
 {
     internal class RedisSocket:IDisposable
     {
+        public bool AllowError { get; set; } = false;
         Socket socket;
         BufferedStream bstream;
         public string Host { get; private set; }
@@ -88,6 +89,11 @@ namespace XRedis
                 socket = null;
                 throw new Exception("发送Send命令失败！");
             }
+        }
+        public object SendCommands(string cmd, params string[] args)
+        {
+            SendCommand(cmd, args);
+            return ParseResp();
         }
         public string SendCommandString(string cmd, params string[] args)
         {
@@ -184,7 +190,12 @@ namespace XRedis
                     case '+':
                         return ReadLine();
                     case '-':
-                        return ReadLine();
+                        var error= ReadLine();
+                        if (AllowError)
+                        {
+                            return error;
+                        }
+                        throw new Exception(error);
                     case ':':
                         return Convert.ToInt32(ReadLine());
                     case '$':
