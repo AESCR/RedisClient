@@ -15,12 +15,7 @@ namespace XRedisTest
         [TestMethod]
         public void TestGetRedisClient()
         {
-            for (int i = 0; i < 1000; i++)
-            {
-                var key = random.GetRandomString(10);
-                var x = redisCluster.GetRedisClient(key);
-                x.Set(key, x.HostPort);
-            }
+           
         }
     }
 }

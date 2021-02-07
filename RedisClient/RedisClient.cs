@@ -14,24 +14,22 @@ namespace RedisClient
         public int Port => _redisSocket.Port;
         public string Password => _redisSocket.Password;
         public string HostPort => $"{Host}:{Port}";
-        private List<RedisClient> SlaveClient = new List<RedisClient>();
+        private readonly List<RedisClient> _slaveClient = new List<RedisClient>();
         public RedisClient GetRandomSlaveClient()
         {
-            var index= random.Next(0, SlaveClient.Count);
-            return SlaveClient[index];
+            var index= random.Next(0, _slaveClient.Count);
+            return _slaveClient[index];
         }
         public void AddSlave(string host, int port= 6379, string password="")
         {
-           var exits=  SlaveClient.Exists(x => x.HostPort == $"{host}:{port}");
-            if (exits==false)
-            {
-                var slave = new RedisClient(host, port, password);
-                SlaveClient.Add(slave);
-                var slaveOf= slave.SlaveOf(Host, Port);
-                Console.WriteLine($"SlaveOf:{HostPort}----{slaveOf}");
-            }
+           var exits=  _slaveClient.Exists(x => x.HostPort == $"{host}:{port}");
+           if (exits != false) return;
+           var slave = new RedisClient(host, port, password);
+            _slaveClient.Add(slave);
+            var slaveOf= slave.SlaveOf(Host, Port);
+            Console.WriteLine($"SlaveOf:{HostPort}----{slaveOf}");
         }
-        private bool disposedValue;
+        private bool _disposedValue;
 
         public RedisClient(string host, string password) : this(host, 6379, password)
         {
@@ -980,21 +978,21 @@ namespace RedisClient
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!disposedValue)
+            if (!_disposedValue)
             {
                 if (disposing)
                 {
                     // TODO: 释放托管状态(托管对象)
                     _redisSocket?.Dispose();
                 }
-                for (int i = 0; i < SlaveClient.Count; i++)
+                for (int i = 0; i < _slaveClient.Count; i++)
                 {
-                    var slave = SlaveClient[i];
+                    var slave = _slaveClient[i];
                     slave.Dispose(disposing);
                 }
                 // TODO: 释放未托管的资源(未托管的对象)并替代终结器
                 // TODO: 将大型字段设置为 null
-                disposedValue = true;
+                _disposedValue = true;
             }
         }
 
