@@ -7,11 +7,32 @@ namespace RedisClient
 {
     public class RedisClient: IRedisClient
     {
+        private Random random = new Random();
         public bool IsConnected => _redisSocket?.IsConnected ?? false;
         private readonly RedisSocket _redisSocket;
         public string Host=>_redisSocket.Host;
         public int Port => _redisSocket.Port;
+        public string Password => _redisSocket.Password;
         public string HostPort => $"{Host}:{Port}";
+        private List<RedisClient> SlaveClient = new List<RedisClient>();
+        public RedisClient GetRandomSlaveClient()
+        {
+            var index= random.Next(0, SlaveClient.Count);
+            return SlaveClient[index];
+        }
+        public void AddSlave(string host, int port= 6379, string password="")
+        {
+           var exits=  SlaveClient.Exists(x => x.HostPort == $"{host}:{port}");
+            if (exits==false)
+            {
+                var slave = new RedisClient(host, port, password);
+                SlaveClient.Add(slave);
+                var slaveOf= slave.SlaveOf(Host, Port);
+                Console.WriteLine($"SlaveOf:{HostPort}----{slaveOf}");
+            }
+        }
+        private bool disposedValue;
+
         public RedisClient(string host, string password) : this(host, 6379, password)
         {
         }
@@ -752,7 +773,7 @@ namespace RedisClient
 
         public string Sync()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedString("Sync");
         }
 
         public string ClientKill(string host, int port)
@@ -955,6 +976,39 @@ namespace RedisClient
             bool withDist = false, bool withHash = false, int count = -1, int sort = -1)
         {
             throw new NotImplementedException();
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: 释放托管状态(托管对象)
+                    _redisSocket?.Dispose();
+                }
+                for (int i = 0; i < SlaveClient.Count; i++)
+                {
+                    var slave = SlaveClient[i];
+                    slave.Dispose(disposing);
+                }
+                // TODO: 释放未托管的资源(未托管的对象)并替代终结器
+                // TODO: 将大型字段设置为 null
+                disposedValue = true;
+            }
+        }
+
+        // TODO: 仅当“Dispose(bool disposing)”拥有用于释放未托管资源的代码时才替代终结器
+        ~RedisClient()
+        {
+            // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
+            Dispose(disposing: false);
+        }
+        public void Dispose()
+        {
+            // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

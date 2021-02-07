@@ -5,6 +5,8 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Linq;
+using XRedis;
 
 namespace RedisClient
 {
@@ -16,44 +18,24 @@ namespace RedisClient
         }
         public static void Load()
         {
-            if (!File.Exists("redis.json"))
-            {
-                var txt = JsonSerializer.Serialize(_master);
-                using (FileStream fileStream = new FileStream("redis.json", FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite))
-                {
-                    var bytes = Encoding.UTF8.GetBytes(txt);
-                    fileStream.Write(bytes, 0, bytes.Length);
-                    fileStream.Close();
-                }
-            }
-            else
-            {
-                var txt = string.Empty;
-                using (FileStream fileStream = new FileStream("redis.json", FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
-                {
-                    StreamReader sr = new StreamReader(fileStream, Encoding.UTF8);
-                    txt = sr.ReadToEnd();
-                    sr.Close();
-                    fileStream.Close();
-                }
-                List < MasterServer > master= JsonSerializer.Deserialize<List<MasterServer>>(txt);
-                if (string.IsNullOrEmpty(txt)) return;
-                lock (_master)
-                {
-                    _master = master;
-                }
-            }
-         
+            var redis1 = new RedisClient("127.0.0.1", 6379);
+            var redis2= new RedisClient("127.0.0.1", 6380);
+            var redis3 = new RedisClient("127.0.0.1", 6381);
+            redis1.AddSlave("127.0.0.1", 6382);
+            redis2.AddSlave("127.0.0.1", 6383);
+            redis3.AddSlave("127.0.0.1", 6384);
+            Master.Add(redis1);
+            Master.Add(redis2);
+            Master.Add(redis3);
         }
+        private KetamaNodeLocator KetamaNode => new KetamaNodeLocator(Master.Select(x=>x.HostPort).ToList());
+        private static readonly List<RedisClient> Master=new List<RedisClient>();
 
-        private KetamaNodeLocator KetamaNode => new KetamaNodeLocator(_master);
-        private static List<MasterServer> _master=new List<MasterServer>();
-
-        private MasterServer AllotRedis(string key)
+        private RedisClient AllotRedis(string key)
         {
             var ms = KetamaNode.GetNodes(key);
-            Console.WriteLine($"Key:{key}------分配给了{ms.HostPort}");
-            return ms;
+            Console.WriteLine($"Key:{key}------分配给了{ms}");
+            return Master.Find(x=>x.HostPort==ms);
         }
         public RedisClient GetRedisClient(string key)
         {
@@ -67,36 +49,8 @@ namespace RedisClient
         public RedisClient GetSlaveRedisClient(string key)
         {
             var master = AllotRedis(key);
-            var slave= master.GetRandomSlave();
+            var slave= master.GetRandomSlaveClient();
             return new RedisClient(slave.Host, slave.Port, slave.Password);
         }
-    }
-
-    public class MasterServer
-    {
-        private readonly Random _ra;
-
-        public MasterServer()
-        {
-            _ra = new System.Random();
-        }
-
-        public string HostPort => $"{Host}:{Port}";
-        public string Host { get; set; } = "127.0.0.1";
-        public int Port { get; set; } = 6379;
-        public string Password { get; set; }
-        public List<SlaveServer> Slave { get; set; }=new List<SlaveServer>();
-        public SlaveServer GetRandomSlave()
-        {
-            var index=  _ra.Next(0, Slave.Count);
-            return Slave[index];
-        }
-    }
-
-    public class SlaveServer
-    {
-        public string Host { get; set; }
-        public int Port { get; set; }
-        public string Password { get; set; }
     }
 }

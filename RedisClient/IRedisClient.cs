@@ -4,7 +4,7 @@ using System.Text;
 
 namespace RedisClient
 {
-    public interface IRedisClient
+    public interface IRedisClient:IDisposable
     {
         #region Redis 键(key) 命令
 

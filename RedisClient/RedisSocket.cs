@@ -14,12 +14,12 @@ namespace RedisClient
         public string Host { get; private set; }
         public int Port { get; private set; }
         public bool IsConnected => socket?.Connected ?? false;
-        private readonly string _password;
+        public string Password { get; private set; }
         public RedisSocket(string host, int port,string password)
         {
             Host = host;
             Port = port;
-            _password = password;
+            Password = password;
         }
         public RedisSocket(string host, int port):this(host,port,"")
         {
@@ -33,8 +33,8 @@ namespace RedisClient
             };
             socket.Connect(Host, Port);
             _bstream = new BufferedStream(new NetworkStream(socket), 16 * 1024);
-            if (string.IsNullOrWhiteSpace(_password)) return;
-            if (!SendExpectedOk("Auth", _password))
+            if (string.IsNullOrWhiteSpace(Password)) return;
+            if (!SendExpectedOk("Auth", Password))
             {
                 throw new Exception("redis 密码认证失败");
             }
