@@ -3,170 +3,174 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-namespace XRedis
+namespace RedisClient
 {
-    public class RedisClient:ICommand
+    public class RedisClient: IRedisClient
     {
+        public bool IsConnected => _redisSocket?.IsConnected ?? false;
         private readonly RedisSocket _redisSocket;
-        public string Host { get; private set; }
-        public int Port { get; private set; }
-        public bool AllowError
+        public string Host=>_redisSocket.Host;
+        public int Port => _redisSocket.Port;
+        public string HostPort => $"{Host}:{Port}";
+        public RedisClient(string host, string password) : this(host, 6379, password)
         {
-            get => _redisSocket.AllowError;
-            set => _redisSocket.AllowError = value;
+        }
+        public RedisClient(string host) : this(host, 6379, "")
+        {
+        }
+        public RedisClient(string host, int port) : this(host, port, "")
+        {
+        }
+        public RedisClient(string host, int port, string password)
+        {
+            _redisSocket = new RedisSocket(host, port, password);
         }
 
-        public bool IsConnected => _redisSocket?.IsConnected ?? false;
-        public RedisClient(string host, int port):this(host, port,"")
+        public object SendCommand(string cmd, params string[] args)
         {
-        }
-        public RedisClient(string host, int port,string password)
-        {
-            Host = host;
-            Port = port;
-            _redisSocket=new RedisSocket(Host,port,password);
+            return _redisSocket.SendCommand(cmd, args);
         }
         public string Type(string key)
         {
-            return _redisSocket.SendCommandString("Type", key);
+            return _redisSocket.SendExpectedString("Type", key);
         }
 
         public int PExpire(string key, long milliseconds)
         {
-            return _redisSocket.SendCommandInt("PExpire", key, milliseconds.ToString());
+            return _redisSocket.SendExpectedInteger("PExpire", key, milliseconds.ToString());
         }
 
         public int PExpireAt(string key, long timestamp)
         {
-            return _redisSocket.SendCommandInt("PExpireAt", key, timestamp.ToString());
+            return _redisSocket.SendExpectedInteger("PExpireAt", key, timestamp.ToString());
         }
 
         public string Rename(string key, string newKey)
         {
-            return _redisSocket.SendCommandString("Rename", key, newKey);
+            return _redisSocket.SendExpectedString("Rename", key, newKey);
         }
 
         public int Persist(string key)
         {
-            return _redisSocket.SendCommandInt("Persist", key);
+            return _redisSocket.SendExpectedInteger("Persist", key);
         }
 
         public int Move(string key, int dbIndex)
         {
-            return _redisSocket.SendCommandInt("Move", key, dbIndex.ToString());
+            return _redisSocket.SendExpectedInteger("Move", key, dbIndex.ToString());
         }
 
         public string RandomKey()
         {
-            return _redisSocket.SendCommandString("RandomKey");
+            return _redisSocket.SendExpectedString("RandomKey");
         }
 
         public string Dump(string key)
         {
-            return _redisSocket.SendCommandString("Dump", key);
+            return _redisSocket.SendExpectedString("Dump", key);
         }
 
         public int Ttl(string key)
         {
-            return _redisSocket.SendCommandInt("Ttl", key);
+            return _redisSocket.SendExpectedInteger("Ttl", key);
         }
 
         public int Expire(string key, int second)
         {
-            return _redisSocket.SendCommandInt("Expire", key, second.ToString());
+            return _redisSocket.SendExpectedInteger("Expire", key, second.ToString());
         }
 
         public int Del(string key)
         {
-            return _redisSocket.SendCommandInt("Del", key);
+            return _redisSocket.SendExpectedInteger("Del", key);
         }
 
         public int PTtl(string key)
         {
-            return _redisSocket.SendCommandInt("PTtl", key);
+            return _redisSocket.SendExpectedInteger("PTtl", key);
         }
 
         public int RenameNx(string key, string newKey)
         {
-            return _redisSocket.SendCommandInt("RenameNx", key, newKey);
+            return _redisSocket.SendExpectedInteger("RenameNx", key, newKey);
         }
 
         public int Exists(string key)
         {
-            return _redisSocket.SendCommandInt("Exists", key);
+            return _redisSocket.SendExpectedInteger("Exists", key);
         }
 
         public int ExpireAt(string key, long timestamp)
         {
-            return _redisSocket.SendCommandInt("ExpireAt", key, timestamp.ToString());
+            return _redisSocket.SendExpectedInteger("ExpireAt", key, timestamp.ToString());
         }
 
         public string[] Keys(string pattern)
         {
-            return _redisSocket.SendCommandArray("Keys", pattern);
+            return _redisSocket.SendExpectedArray("Keys", pattern);
         }
 
         public int SetNx(string key, string value)
         {
-            return _redisSocket.SendCommandInt("SetNx", key, value);
+            return _redisSocket.SendExpectedInteger("SetNx", key, value);
         }
 
         public string GetRange(string key, int start = 0, int end = -1)
         {
-            return _redisSocket.SendCommandString("GetRange", key, start.ToString(),end.ToString());
+            return _redisSocket.SendExpectedString("GetRange", key, start.ToString(), end.ToString());
         }
 
         public string MSet(Dictionary<string, string> kv)
         {
-            string[] result=new string[kv.Count*2];
+            string[] result = new string[kv.Count * 2];
             int index = 0;
             foreach (string key in kv.Keys)
             {
                 result[index] = key;
-                result[index+1] = kv[key];
-                index=index+2;
+                result[index + 1] = kv[key];
+                index = index + 2;
             }
-            return _redisSocket.SendCommandString("MSet",  result);
+            return _redisSocket.SendExpectedString("MSet", result);
         }
 
         public string SetEx(string key, string value, int timeout)
         {
-            return _redisSocket.SendCommandString("SetEx", timeout.ToString(), value);
+            return _redisSocket.SendExpectedString("SetEx", timeout.ToString(), value);
         }
 
         public string Set(string key, string value)
         {
-            return _redisSocket.SendCommandString("Set", key, value);
+            return _redisSocket.SendExpectedString("Set", key, value);
         }
 
         public string Get(string key)
         {
-            return _redisSocket.SendCommandString("Get", key);
+            return _redisSocket.SendExpectedString("Get", key);
         }
 
         public int GetBit(string key, int offset)
         {
-            return _redisSocket.SendCommandInt("GetBit", key,offset.ToString());
+            return _redisSocket.SendExpectedInteger("GetBit", key, offset.ToString());
         }
 
         public int SetBit(string key, int offset, int value)
         {
-            return _redisSocket.SendCommandInt("SetBit", key, offset.ToString(),value.ToString());
+            return _redisSocket.SendExpectedInteger("SetBit", key, offset.ToString(), value.ToString());
         }
 
         public string Decr(string key)
         {
-            return _redisSocket.SendCommandString("Decr", key);
+            return _redisSocket.SendExpectedString("Decr", key);
         }
 
         public string DecrBy(string key, int num)
         {
-            return _redisSocket.SendCommandString("DecrBy", key, num.ToString());
+            return _redisSocket.SendExpectedString("DecrBy", key, num.ToString());
         }
 
         public int StrLen(string key)
         {
-            return _redisSocket.SendCommandInt("StrLen", key);
+            return _redisSocket.SendExpectedInteger("StrLen", key);
         }
 
         public int MSetNx(Dictionary<string, string> kv)
@@ -179,57 +183,57 @@ namespace XRedis
                 result[index + 1] = kv[key];
                 index = index + 2;
             }
-            return _redisSocket.SendCommandInt("MSetNx", result);
+            return _redisSocket.SendExpectedInteger("MSetNx", result);
         }
 
         public string IncrBy(string key, int num)
         {
-            return _redisSocket.SendCommandString("IncrBy", key,num.ToString());
+            return _redisSocket.SendExpectedString("IncrBy", key, num.ToString());
         }
 
         public string IncrByFloat(string key, float fraction)
         {
-            return _redisSocket.SendCommandString("IncrByFloat", key, fraction.ToString(CultureInfo.InvariantCulture));
+            return _redisSocket.SendExpectedString("IncrByFloat", key, fraction.ToString(CultureInfo.InvariantCulture));
         }
 
         public int SetRange(string key, int offset, string value)
         {
-            return _redisSocket.SendCommandInt("SetRange", key, offset.ToString(), value);
+            return _redisSocket.SendExpectedInteger("SetRange", key, offset.ToString(), value);
         }
 
         public string PSetEx(string key, string value, int milliseconds)
         {
-            return _redisSocket.SendCommandString("PSetEx", key, milliseconds.ToString(), value);
+            return _redisSocket.SendExpectedString("PSetEx", key, milliseconds.ToString(), value);
         }
 
         public int Append(string key, string value)
         {
-            return _redisSocket.SendCommandInt("Append", key, value);
+            return _redisSocket.SendExpectedInteger("Append", key, value);
         }
 
         public string GetSet(string key, string value)
         {
-            return _redisSocket.SendCommandString("GetSet", key, value);
+            return _redisSocket.SendExpectedString("GetSet", key, value);
         }
 
         public string[] MGet(params string[] keys)
         {
-            return _redisSocket.SendCommandArray("MGet", keys);
+            return _redisSocket.SendExpectedArray("MGet", keys);
         }
 
         public string Incr(string key)
         {
-            return _redisSocket.SendCommandString("Incr", key);
+            return _redisSocket.SendExpectedString("Incr", key);
         }
 
         public string LIndex(string key, int index)
         {
-            return _redisSocket.SendCommandString("LIndex", key,index.ToString());
+            return _redisSocket.SendExpectedString("LIndex", key, index.ToString());
         }
 
         public int RPush(string key, params string[] values)
         {
-            string[] args=new string[values.Length+1];
+            string[] args = new string[values.Length + 1];
             args[0] = key;
             int index = 1;
             foreach (var value in values)
@@ -237,17 +241,17 @@ namespace XRedis
                 args[index] = value;
                 index++;
             }
-            return _redisSocket.SendCommandInt("RPush", args);
+            return _redisSocket.SendExpectedInteger("RPush", args);
         }
 
         public string[] LRange(string key, int start = 0, int end = -1)
         {
-            return _redisSocket.SendCommandArray("LRange", key, start.ToString(),end.ToString());
+            return _redisSocket.SendExpectedArray("LRange", key, start.ToString(), end.ToString());
         }
 
         public string[] RPopLPush(string key, string newKey)
         {
-            return _redisSocket.SendCommandArray("RPopLPush", key, newKey);
+            return _redisSocket.SendExpectedArray("RPopLPush", key, newKey);
         }
 
         public string[] BlPop(string[] key, int timeout)
@@ -260,7 +264,7 @@ namespace XRedis
                 index++;
             }
             args[index] = timeout.ToString();
-            return _redisSocket.SendCommandArray("BlPop", args);
+            return _redisSocket.SendExpectedArray("BlPop", args);
         }
 
         public string[] BrPop(string[] keys, int timeout)
@@ -273,32 +277,32 @@ namespace XRedis
                 index++;
             }
             args[index] = timeout.ToString();
-            return _redisSocket.SendCommandArray("BrPop", args);
+            return _redisSocket.SendExpectedArray("BrPop", args);
         }
 
         public string[] BrPopLPush(string key, string newKey, int timeout)
         {
-            return _redisSocket.SendCommandArray("BrPopLPush", key,newKey,timeout.ToString());
+            return _redisSocket.SendExpectedArray("BrPopLPush", key, newKey, timeout.ToString());
         }
 
         public int LRem(string key, string value, int count = 0)
         {
-            return _redisSocket.SendCommandInt("LRem", key, count.ToString(), value);
+            return _redisSocket.SendExpectedInteger("LRem", key, count.ToString(), value);
         }
 
         public int LLen(string key)
         {
-            return _redisSocket.SendCommandInt("LLen", key);
+            return _redisSocket.SendExpectedInteger("LLen", key);
         }
 
         public string LTrim(string key, int start = 0, int end = -1)
         {
-            return _redisSocket.SendCommandString("LTrim", key, start.ToString(),end.ToString());
+            return _redisSocket.SendExpectedString("LTrim", key, start.ToString(), end.ToString());
         }
 
         public string LPop(string key)
         {
-            return _redisSocket.SendCommandString("LPop", key);
+            return _redisSocket.SendExpectedString("LPop", key);
         }
 
         public int LPushX(string key, params string[] values)
@@ -311,27 +315,27 @@ namespace XRedis
                 args[index] = value;
                 index++;
             }
-            return _redisSocket.SendCommandInt("LPushX", args);
+            return _redisSocket.SendExpectedInteger("LPushX", args);
         }
 
         public int LInsert(string key, string value, string existValue, bool before = true)
         {
             string[] args = new string[4];
             args[0] = key;
-            args[1] = before? "BEFORE": "AFTER ";
+            args[1] = before ? "BEFORE" : "AFTER ";
             args[2] = existValue;
             args[3] = value;
-            return _redisSocket.SendCommandInt("LInsert", args);
+            return _redisSocket.SendExpectedInteger("LInsert", args);
         }
 
         public string RPop(string key)
         {
-            return _redisSocket.SendCommandString("RPop", key);
+            return _redisSocket.SendExpectedString("RPop", key);
         }
 
         public string LSet(string key, string value, int index)
         {
-            return _redisSocket.SendCommandString("LSet", key,index.ToString(),value);
+            return _redisSocket.SendExpectedString("LSet", key, index.ToString(), value);
         }
 
         public int LPush(string key, params string[] values)
@@ -344,7 +348,7 @@ namespace XRedis
                 args[index] = value;
                 index++;
             }
-            return _redisSocket.SendCommandInt("LPush", args);
+            return _redisSocket.SendExpectedInteger("LPush", args);
         }
 
         public int RPushX(string key, params string[] values)
@@ -357,12 +361,12 @@ namespace XRedis
                 args[index] = value;
                 index++;
             }
-            return _redisSocket.SendCommandInt("RPushX", args);
+            return _redisSocket.SendExpectedInteger("RPushX", args);
         }
 
         public string HmSet(string key, Dictionary<string, string> kV)
         {
-            string[] args = new string[kV.Count*2+1];
+            string[] args = new string[kV.Count * 2 + 1];
             args[0] = key;
             int index = 1;
             foreach (var k in kV.Keys)
@@ -372,7 +376,7 @@ namespace XRedis
                 args[index] = kV[k];
                 index++;
             }
-            return _redisSocket.SendCommandString("HmSet", args);
+            return _redisSocket.SendExpectedString("HmSet", args);
         }
 
         public string[] HmGet(string key, params string[] fields)
@@ -385,37 +389,37 @@ namespace XRedis
                 args[index] = field;
                 index++;
             }
-            return _redisSocket.SendCommandArray("HmGet", args);
+            return _redisSocket.SendExpectedArray("HmGet", args);
         }
 
         public int HSet(string key, string field, string value)
         {
-            return _redisSocket.SendCommandInt("HSet", key, field, value);
+            return _redisSocket.SendExpectedInteger("HSet", key, field, value);
         }
 
         public string[] HGetAll(string key)
         {
-            return _redisSocket.SendCommandArray("HGetAll", key);
+            return _redisSocket.SendExpectedArray("HGetAll", key);
         }
 
         public string HGet(string key, string field)
         {
-            return _redisSocket.SendCommandString("HSet", key, field);
+            return _redisSocket.SendExpectedString("HSet", key, field);
         }
 
         public int HExists(string key, string field)
         {
-            return _redisSocket.SendCommandInt("HExists", key, field);
+            return _redisSocket.SendExpectedInteger("HExists", key, field);
         }
 
         public string HinCrBy(string key, string field, int number)
         {
-            return _redisSocket.SendCommandString("HinCrBy", key, field, number.ToString());
+            return _redisSocket.SendExpectedString("HinCrBy", key, field, number.ToString());
         }
 
         public int HLen(string key)
         {
-            return _redisSocket.SendCommandInt("HLen", key);
+            return _redisSocket.SendExpectedInteger("HLen", key);
         }
 
         public int HDel(string key, params string[] fields)
@@ -428,55 +432,55 @@ namespace XRedis
                 args[index] = field;
                 index++;
             }
-            return _redisSocket.SendCommandInt("HDel", args);
+            return _redisSocket.SendExpectedInteger("HDel", args);
         }
 
         public string[] HVals(string key)
         {
-            return _redisSocket.SendCommandArray("HVals", key);
+            return _redisSocket.SendExpectedArray("HVals", key);
         }
 
         public string HinCrByFloat(string key, string field, float fraction)
         {
-            return _redisSocket.SendCommandString("HinCrByFloat", key, field, fraction.ToString(CultureInfo.InvariantCulture));
+            return _redisSocket.SendExpectedString("HinCrByFloat", key, field, fraction.ToString(CultureInfo.InvariantCulture));
         }
 
         public string[] HKeys(string key)
         {
-            return _redisSocket.SendCommandArray("HKeys", key);
+            return _redisSocket.SendExpectedArray("HKeys", key);
         }
 
         public int HSetNx(string key, string field, string value)
         {
-            return _redisSocket.SendCommandInt("HKeys", key);
+            return _redisSocket.SendExpectedInteger("HKeys", key);
         }
 
         public string[] SUnion(params string[] keys)
         {
-            return _redisSocket.SendCommandArray("SUnion", keys);
+            return _redisSocket.SendExpectedArray("SUnion", keys);
         }
 
         public int SCard(string key)
         {
-            return _redisSocket.SendCommandInt("SCard", key);
+            return _redisSocket.SendExpectedInteger("SCard", key);
         }
 
         public string[] SRandMember(string key, int count)
         {
-            return _redisSocket.SendCommandArray("SRandMember", key,count.ToString());
+            return _redisSocket.SendExpectedArray("SRandMember", key, count.ToString());
         }
         public string SRandMember(string key)
         {
-            return _redisSocket.SendCommandString("SRandMember", key);
+            return _redisSocket.SendExpectedString("SRandMember", key);
         }
         public string[] SMembers(string key)
         {
-            return _redisSocket.SendCommandArray("SMembers", key);
+            return _redisSocket.SendExpectedArray("SMembers", key);
         }
 
         public string[] SInter(params string[] keys)
         {
-            return _redisSocket.SendCommandArray("SInter", keys);
+            return _redisSocket.SendExpectedArray("SInter", keys);
         }
 
         public int SRem(string key, params string[] member)
@@ -489,12 +493,12 @@ namespace XRedis
                 args[index] = field;
                 index++;
             }
-            return _redisSocket.SendCommandInt("SRem", args);
+            return _redisSocket.SendExpectedInteger("SRem", args);
         }
 
         public int SMove(string source, string destination, string moveMember)
         {
-            return _redisSocket.SendCommandInt("SMove", source, destination, moveMember);
+            return _redisSocket.SendExpectedInteger("SMove", source, destination, moveMember);
         }
 
         public int SAdd(string key, params string[] values)
@@ -507,12 +511,12 @@ namespace XRedis
                 args[index] = field;
                 index++;
             }
-            return _redisSocket.SendCommandInt("SAdd", args);
+            return _redisSocket.SendExpectedInteger("SAdd", args);
         }
 
         public int SIsMember(string key, string value)
         {
-            return _redisSocket.SendCommandInt("SAdd", key, value);
+            return _redisSocket.SendExpectedInteger("SAdd", key, value);
         }
 
         public int SDiffStore(string destination, params string[] keys)
@@ -525,12 +529,12 @@ namespace XRedis
                 args[index] = k;
                 index++;
             }
-            return _redisSocket.SendCommandInt("SDiffStore", args);
+            return _redisSocket.SendExpectedInteger("SDiffStore", args);
         }
 
         public string[] SDiff(params string[] keys)
         {
-            return _redisSocket.SendCommandArray("SDiff", keys);
+            return _redisSocket.SendExpectedArray("SDiff", keys);
         }
 
         public string[] SScan(string key, int cursor, string pattern, int count = 10)
@@ -540,7 +544,7 @@ namespace XRedis
             args[1] = cursor.ToString();
             args[2] = pattern;
             args[3] = count.ToString();
-            return _redisSocket.SendCommandArray("SScan", args);
+            return _redisSocket.SendExpectedArray("SScan", args);
         }
 
         public string[] SInterStore(string destination, params string[] keys)
@@ -553,7 +557,7 @@ namespace XRedis
                 args[index] = k;
                 index++;
             }
-            return _redisSocket.SendCommandArray("SInterStore", args);
+            return _redisSocket.SendExpectedArray("SInterStore", args);
         }
 
         public int SUnionStore(string destination, params string[] keys)
@@ -566,32 +570,32 @@ namespace XRedis
                 args[index] = k;
                 index++;
             }
-            return _redisSocket.SendCommandInt("SInterStore", args);
+            return _redisSocket.SendExpectedInteger("SInterStore", args);
         }
 
         public string SPop(string key)
         {
-            return _redisSocket.SendCommandString("SPop", key);
+            return _redisSocket.SendExpectedString("SPop", key);
         }
 
         public string ZRevRank(string key, string member)
         {
-            return _redisSocket.SendCommandString("ZRevRank", key, member);
+            return _redisSocket.SendExpectedString("ZRevRank", key, member);
         }
 
         public int ZLexCount(string key, string min, string max)
         {
-            return _redisSocket.SendCommandInt("ZLexCount", key, min, max);
+            return _redisSocket.SendExpectedInteger("ZLexCount", key, min, max);
         }
 
         public int ZRemRangeByRank(string key, int start, int stop)
         {
-            return _redisSocket.SendCommandInt("ZREMRANGEBYRANK", key, start.ToString(), stop.ToString());
+            return _redisSocket.SendExpectedInteger("ZREMRANGEBYRANK", key, start.ToString(), stop.ToString());
         }
 
         public int ZCard(string key)
         {
-            return _redisSocket.SendCommandInt("ZCard", key);
+            return _redisSocket.SendExpectedInteger("ZCard", key);
         }
 
         public int ZRem(string key, params string[] member)
@@ -604,76 +608,76 @@ namespace XRedis
                 args[index] = k;
                 index++;
             }
-            return _redisSocket.SendCommandInt("ZRem", args);
+            return _redisSocket.SendExpectedInteger("ZRem", args);
         }
 
         public int ZRank(string key, string member)
         {
-            return _redisSocket.SendCommandInt("ZRank", key,member);
+            return _redisSocket.SendExpectedInteger("ZRank", key, member);
         }
 
         public string ZIncrBy(string key, int increment, string member)
         {
-            return _redisSocket.SendCommandString("ZRank", key, increment.ToString(), member);
+            return _redisSocket.SendExpectedString("ZRank", key, increment.ToString(), member);
         }
 
         public string Echo(string message)
         {
-            return _redisSocket.SendCommandString("Echo", message);
+            return _redisSocket.SendExpectedString("Echo", message);
         }
 
         public string Select(int index)
         {
-            return _redisSocket.SendCommandString("Select",index.ToString());
+            return _redisSocket.SendExpectedString("Select", index.ToString());
         }
 
         public string Ping()
         {
-            return _redisSocket.SendCommandString("Ping");
+            return _redisSocket.SendExpectedString("Ping");
         }
 
         public string Quit()
         {
-            return _redisSocket.SendCommandString("Quit");
+            return _redisSocket.SendExpectedString("Quit");
         }
 
         public string Auth(string password)
         {
-            return _redisSocket.SendCommandString("Auth",password);
+            return _redisSocket.SendExpectedString("Auth", password);
         }
 
         public string Pause(long timeout)
         {
-            return _redisSocket.SendCommandString("Pause", timeout.ToString());
+            return _redisSocket.SendExpectedString("Pause", timeout.ToString());
         }
 
         public string DebugObject(string key)
         {
-            return _redisSocket.SendCommandString("DEBUG OBJECT", key);
+            return _redisSocket.SendExpectedString("DEBUG OBJECT", key);
         }
 
         public string FlushDb()
         {
-            return _redisSocket.SendCommandString("FlushDb");
+            return _redisSocket.SendExpectedString("FlushDb");
         }
 
         public string Save()
         {
-            return _redisSocket.SendCommandString("Save");
+            return _redisSocket.SendExpectedString("Save");
         }
 
         public string LastSave()
         {
-            return _redisSocket.SendCommandString("LastSave");
+            return _redisSocket.SendExpectedString("LastSave");
         }
 
         public Dictionary<string, string> ConfigGet(string parameters)
         {
-            Dictionary<string, string> dic=new Dictionary<string, string>();
-            var result= _redisSocket.SendCommandArray("Config Get", parameters);
+            Dictionary<string, string> dic = new Dictionary<string, string>();
+            var result = _redisSocket.SendExpectedArray("Config Get", parameters);
             for (int i = 0; i < result.Length;)
             {
-                dic.Add(result[i],result[i+1]);
+                dic.Add(result[i], result[i + 1]);
                 i = i + 2;
             }
             return dic;
@@ -682,7 +686,7 @@ namespace XRedis
         public Dictionary<string, string> ConfigGet()
         {
             Dictionary<string, string> dic = new Dictionary<string, string>();
-            var result = _redisSocket.SendCommandArray("Config Get");
+            var result = _redisSocket.SendExpectedArray("Config Get");
             for (int i = 0; i < result.Length;)
             {
                 dic.Add(result[i], result[i + 1]);
@@ -693,17 +697,17 @@ namespace XRedis
 
         public string[] Command()
         {
-            return _redisSocket.SendCommandArray("Command");
+            return _redisSocket.SendExpectedArray("Command");
         }
 
         public string SlaveOf(string host, int port)
         {
-            return _redisSocket.SendCommandString("SLAVEOF",host,port.ToString());
+            return _redisSocket.SendExpectedString("SLAVEOF", host, port.ToString());
         }
 
         public string SlaveOf()
         {
-            return _redisSocket.SendCommandString("SLAVEOF", "NO", "ONE");
+            return _redisSocket.SendExpectedString("SLAVEOF", "NO", "ONE");
         }
 
         public void DebugSegfault()
@@ -951,20 +955,6 @@ namespace XRedis
             bool withDist = false, bool withHash = false, int count = -1, int sort = -1)
         {
             throw new NotImplementedException();
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                _redisSocket?.Dispose();
-            }
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
         }
     }
 }

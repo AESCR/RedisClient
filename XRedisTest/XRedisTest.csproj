@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\XRedis\XRedis.csproj" />
+    <ProjectReference Include="..\RedisClient\RedisClient.csproj" />
   </ItemGroup>
 
 </Project>

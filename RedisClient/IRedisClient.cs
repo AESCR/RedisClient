@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace XRedis
+namespace RedisClient
 {
-    public interface ICommand : IDisposable
+    public interface IRedisClient
     {
         #region Redis 键(key) 命令
 
@@ -351,7 +351,7 @@ namespace XRedis
         /// <param name="timeout">等待超时</param>
         /// <param name="key">被弹出列表所属的 key</param>
         /// <returns>如果列表为空，返回一个 nil 。 否则，返回一个含有两个元素的列表，第一个元素是被弹出元素所属的 key ，第二个元素是被弹出元素的值。</returns>
-        string[] BlPop(string[] key,int timeout );
+        string[] BlPop(string[] key, int timeout);
 
         /// <summary>
         /// 移出并获取列表的最后一个元素， 如果列表没有元素会阻塞列表直到等待超时或发现可弹出元素为止。
@@ -728,7 +728,7 @@ namespace XRedis
         /// <param name="start"></param>
         /// <param name="stop"></param>
         /// <returns>被移除成员的数量。</returns>
-        int ZRemRangeByRank(string key,int start,int stop);
+        int ZRemRangeByRank(string key, int start, int stop);
         /// <summary>
         /// 用于计算集合中元素的数量
         /// </summary>
@@ -741,14 +741,14 @@ namespace XRedis
         /// <param name="key">当 key 存在但不是有序集类型时，返回一个错误。</param>
         /// <param name="member"> 在 Redis 2.4 版本以前， ZREM 每次只能删除一个元素。</param>
         /// <returns>被成功移除的成员的数量，不包括被忽略的成员</returns>
-        int ZRem(string key,params string[] member);
+        int ZRem(string key, params string[] member);
         /// <summary>
         /// 返回有序集中指定成员的排名。其中有序集成员按分数值递增(从小到大)顺序排列。
         /// </summary>
         /// <param name="key">键</param>
         /// <param name="member"></param>
         /// <returns>如果成员是有序集 key 的成员，返回 member 的排名。 如果成员不是有序集 key 的成员，返回 nil 。</returns>
-        int ZRank(string key,string member);
+        int ZRank(string key, string member);
         /// <summary>
         /// 对有序集合中指定成员的分数加上增量 increment
         /// </summary>
@@ -756,7 +756,7 @@ namespace XRedis
         /// <param name="increment">增量  递一个负数值 increment ，让分数减去相应的值</param>
         /// <param name="member"></param>
         /// <returns>member 成员的新分数值，以字符串形式表示。</returns>
-        string ZIncrBy(string key,int increment, string member);
+        string ZIncrBy(string key, int increment, string member);
 
         //TODO Redis Zunionstore 命令 Redis Zinterstore 命令 ZRangeByScore
         #endregion
@@ -822,7 +822,7 @@ namespace XRedis
         /// <returns>保存成功时返回 OK 。</returns>
         string Save();
 
-      
+
 
         /// <summary>
         /// 返回最近一次 Redis 成功将数据保存到磁盘上的时间，以 UNIX 时间戳格式表示。
@@ -1083,7 +1083,7 @@ namespace XRedis
         /// <param name="keys">键名</param>
         /// <param name="args"> 附加参数，在 Lua 中通过全局变量 ARGV 数组访问，访问的形式和 KEYS 变量类似( ARGV[1] 、 ARGV[2] ，诸如此类)。</param>
         /// <returns></returns>
-        string[] Eval(string script,int numkeys, string[] keys,string[] args=null);
+        string[] Eval(string script, int numkeys, string[] keys, string[] args = null);
         /// <summary>
         /// 根据给定的 sha1 校验码，执行缓存在服务器中的脚本。
         /// </summary>
@@ -1143,14 +1143,14 @@ namespace XRedis
         /// <param name="destKey">合并后的键</param>
         /// <param name="sourceKey">要合并的键</param>
         /// <returns>返回 OK。</returns>
-        string PgMerge(string destKey,params string[] sourceKey);
+        string PgMerge(string destKey, params string[] sourceKey);
         /// <summary>
         /// 将所有元素参数添加到 HyperLogLog 数据结构中。
         /// </summary>
         /// <param name="key">存储的位置</param>
         /// <param name="element">要存储的元素</param>
         /// <returns>整型，如果至少有个元素被添加返回 1， 否则返回 0。</returns>
-        int PfAdd(string key,params string[] element);
+        int PfAdd(string key, params string[] element);
         /// <summary>
         /// 返回给定 HyperLogLog 的基数估算值。
         /// </summary>
@@ -1177,7 +1177,7 @@ namespace XRedis
         /// 用于查看订阅与发布系统状态，它由数个不同格式的子命令组成。
         /// </summary>
         /// <returns>由活跃频道组成的列表。</returns>
-        string PubSub(string subCommand,params string[] argument);
+        string PubSub(string subCommand, params string[] argument);
         /// <summary>
         /// 用于退订所有给定模式的频道。
         /// </summary>
@@ -1191,7 +1191,7 @@ namespace XRedis
         /// <param name="channel">频道</param>
         /// <param name="message">信息</param>
         /// <returns>接收到信息的订阅者数量。</returns>
-        int Publish(string channel,string message);
+        int Publish(string channel, string message);
         /// <summary>
         /// 订阅一个或多个符合给定模式的频道。
         /// </summary>
@@ -1228,7 +1228,7 @@ namespace XRedis
         /// ft 表示单位为英尺。
         /// </param>
         /// <returns>计算出的距离会以双精度浮点数的形式被返回。 如果给定的位置元素不存在， 那么命令返回空值。</returns>
-        string GeoDist(string[] keys,string unit= "km");
+        string GeoDist(string[] keys, string unit = "km");
 
         /// <summary>
         /// 以给定的经纬度为中心， 找出某一半径内的元素  GEORADIUS Sicily 15 37 200 km WITHCOORD WITHDIST
@@ -1253,7 +1253,7 @@ namespace XRedis
         /// ASC: 根据中心的位置， 按照从近到远的方式返回位置元素。
         /// DESC: 根据中心的位置， 按照从远到近的方式返回位置元素。</param>
         /// <returns></returns>
-        string GeoRadius(string key, decimal longitude,decimal latitude,long radius, string unit = "km", bool withCooRd = false, bool withDist = false, bool withHash = false, int count = -1, int sort = -1);
+        string GeoRadius(string key, decimal longitude, decimal latitude, long radius, string unit = "km", bool withCooRd = false, bool withDist = false, bool withHash = false, int count = -1, int sort = -1);
         /// <summary>
         /// 将指定的地理空间位置（纬度、经度、名称）添加到指定的key中
         /// </summary>
@@ -1262,7 +1262,7 @@ namespace XRedis
         /// <param name="latitude">纬度</param>
         /// <param name="member">位置名称</param>
         /// <returns></returns>
-        string GeoAdd(string key, string member, decimal longitude,decimal latitude);
+        string GeoAdd(string key, string member, decimal longitude, decimal latitude);
 
         /// <summary>
         /// 找出位于指定范围内的元素，中心点是由给定的位置元素决定
@@ -1286,7 +1286,7 @@ namespace XRedis
         /// ASC: 根据中心的位置， 按照从近到远的方式返回位置元素。
         /// DESC: 根据中心的位置， 按照从远到近的方式返回位置元素。</param>
         /// <returns></returns>
-        string GeoRadiusByMember(string key, string member,long radius, string unit = "km", bool withCooRd=false,bool withDist=false,bool withHash=false,int count=-1,int sort=-1);
+        string GeoRadiusByMember(string key, string member, long radius, string unit = "km", bool withCooRd = false, bool withDist = false, bool withHash = false, int count = -1, int sort = -1);
 
         #endregion
     }
