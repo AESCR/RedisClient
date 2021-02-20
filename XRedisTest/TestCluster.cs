@@ -10,15 +10,14 @@ namespace XRedisTest
     [TestClass]
     public class TestCluster
     {
-        private RedisClusterClient redisCluster = new RedisClusterClient();
+        private AllotRedisClient redisCluster = new AllotRedisClient();
         private RandomNum random = new RandomNum();
         [TestMethod]
         public void TestGetRedisClient()
         {
             var randomStr = "aescr";
-            var redisClient= redisCluster.GetMasterRedisClient(randomStr);
+            var redisClient= redisCluster.GetWriteClient(randomStr);
             redisClient.Set(randomStr, "100");
-
         }
     }
 }

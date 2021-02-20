@@ -77,7 +77,7 @@ namespace RedisClient
         public int SendExpectedInteger(string cmd, params string[] args)
         {
             var resp = SendCommand(cmd, args);
-            return (int) resp;
+            return Convert.ToInt32(resp);
         }
         /// <summary>
         /// 响应结果预期整数
@@ -86,7 +86,12 @@ namespace RedisClient
         public string SendExpectedString(string cmd, params string[] args)
         {
             var resp = SendCommand(cmd, args);
-            return resp.ToString();
+            var result = resp.ToString();
+            if (result== "nil")
+            {
+                return null;
+            }
+            return result;
         }
         public string[] SendExpectedArray(string cmd, params string[] args)
         {

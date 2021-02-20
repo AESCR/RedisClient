@@ -7,30 +7,18 @@ namespace RedisClient
 {
     public class RedisClient: IRedisClient
     {
-        private readonly Random _random = new Random();
         public bool IsConnected => _redisSocket?.IsConnected ?? false;
         private readonly RedisSocket _redisSocket;
         public string Host=>_redisSocket.Host;
         public int Port => _redisSocket.Port;
         public string Password => _redisSocket.Password;
         public string HostPort => $"{Host}:{Port}";
-        private readonly List<RedisClient> _slaveClient = new List<RedisClient>();
-        public RedisClient GetRandomSlaveClient()
-        {
-            var index= _random.Next(0, _slaveClient.Count);
-            return _slaveClient[index];
-        }
-        public void AddSlave(string host, int port= 6379, string password="")
-        {
-           var exits=  _slaveClient.Exists(x => x.HostPort == $"{host}:{port}");
-           if (exits != false) return;
-           var slave = new RedisClient(host, port, password);
-            _slaveClient.Add(slave);
-            var slaveOf= slave.SlaveOf(Host, Port);
-            Console.WriteLine($"SlaveOf:{HostPort}----{slaveOf}");
-        }
         private bool _disposedValue;
 
+        public RedisClient(RedisOption redisOption)
+        {
+            _redisSocket = new RedisSocket(redisOption.Host, redisOption.Port, redisOption.Password);
+        }
         public RedisClient(string host, string password) : this(host, 6379, password)
         {
         }
@@ -157,9 +145,9 @@ namespace RedisClient
             return _redisSocket.SendExpectedString("SetEx", timeout.ToString(), value);
         }
 
-        public string Set(string key, string value)
+        public bool Set(string key, string value)
         {
-            return _redisSocket.SendExpectedString("Set", key, value);
+            return _redisSocket.SendExpectedOk("Set", key, value);
         }
 
         public string Get(string key)
@@ -719,14 +707,20 @@ namespace RedisClient
             return _redisSocket.SendExpectedArray("Command");
         }
 
-        public string SlaveOf(string host, int port)
+        public bool SlaveOf(string host, int port,string password="")
         {
-            return _redisSocket.SendExpectedString("SLAVEOF", host, port.ToString());
+            var result= _redisSocket.SendExpectedOk("SLAVEOF", host, port.ToString());
+            //设置向redis主同步的密码
+            if (string.IsNullOrWhiteSpace(password)==false)
+            {
+                 ConfigSet("masterauth", password);
+            }
+            return result;
         }
 
-        public string SlaveOf()
+        public bool SlaveOf()
         {
-            return _redisSocket.SendExpectedString("SLAVEOF", "NO", "ONE");
+            return _redisSocket.SendExpectedOk("SLAVEOF", "NO", "ONE");
         }
 
         public void DebugSegfault()
@@ -754,9 +748,9 @@ namespace RedisClient
             return _redisSocket.SendExpectedArray("CLUSTER SLOTS");
         }
 
-        public string ConfigSet(string parameter, string value)
+        public bool ConfigSet(string parameter, string value)
         {
-            return _redisSocket.SendExpectedString("CLUSTER SLOTS");
+            return _redisSocket.SendExpectedOk("CLUSTER SLOTS");
         }
 
         public string[] CommandInfo(params string[] commands)
@@ -983,11 +977,6 @@ namespace RedisClient
                 {
                     // TODO: 释放托管状态(托管对象)
                     _redisSocket?.Dispose();
-                }
-                for (int i = 0; i < _slaveClient.Count; i++)
-                {
-                    var slave = _slaveClient[i];
-                    slave.Dispose(disposing);
                 }
                 // TODO: 释放未托管的资源(未托管的对象)并替代终结器
                 // TODO: 将大型字段设置为 null

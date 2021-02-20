@@ -172,7 +172,7 @@ namespace RedisClient
         /// 在 Redis 2.6.12 以前版本， SET 命令总是返回 OK 。
         /// 从 Redis 2.6.12 版本开始， SET 在设置操作成功完成时，才返回 OK 。
         /// </returns>
-        string Set(string key, string value);
+        bool Set(string key, string value);
 
         /// <summary>
         /// 用于获取指定 key 的值。如果 key 不存在，返回 nil 。如果key 储存的值不是字符串类型，返回一个错误。
@@ -855,14 +855,15 @@ namespace RedisClient
         /// </summary>
         /// <param name="host"></param>
         /// <param name="port"></param>
-        /// <returns></returns>
-        string SlaveOf(string host, int port);
+        /// <param name="password"></param>
+        /// <returns>总是返回 OK 。</returns>
+        bool SlaveOf(string host, int port,string password="");
 
         /// <summary>
         /// 一个从属服务器执行命令 SLAVEOF NO ONE 将使得这个从属服务器关闭复制功能，并从从属服务器转变回主服务器，原来同步所得的数据集不会被丢弃。
         /// </summary>
         /// <returns>总是返回 OK 。</returns>
-        string SlaveOf();
+        bool SlaveOf();
 
         /// <summary>
         /// 执行一个非法的内存访问从而让 Redis 崩溃，仅在开发时用于 BUG 调试。
@@ -901,7 +902,7 @@ namespace RedisClient
         /// <param name="parameter">配置参数</param>
         /// <param name="value">值</param>
         /// <returns>当设置成功时返回 OK ，否则返回一个错误。</returns>
-        string ConfigSet(string parameter, string value);
+        bool ConfigSet(string parameter, string value);
 
         /// <summary>
         /// 用于获取 redis 命令的描述信息。
