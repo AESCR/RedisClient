@@ -736,37 +736,36 @@ namespace RedisClient
 
         public string FlushAll()
         {
-            throw new NotImplementedException();
+              return _redisSocket.SendExpectedString("FlushAll");
         }
 
         public int DbSize()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedInteger("DbSize");
         }
 
         public string BgReWriteAof()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedString("BGREWRITEAOF ");
         }
 
         public string[] ClusterSlots()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedArray("CLUSTER SLOTS");
         }
 
         public string ConfigSet(string parameter, string value)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedString("CLUSTER SLOTS");
         }
 
         public string[] CommandInfo(params string[] commands)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedArray("COMMAND INFO",commands);
         }
-
         public string ShutDown()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedString("SHUTDOWN");
         }
 
         public string Sync()
@@ -776,82 +775,82 @@ namespace RedisClient
 
         public string ClientKill(string host, int port)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedString("CLIENT KILL",$"{host}:{port}");
         }
 
         public string[] Role()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedArray("ROLE");
         }
 
         public string Monitor()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedString("MONITOR");
         }
 
         public string[] CommandGetKeys(params string[] parameters)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedArray("COMMAND GETKEYS",parameters);
         }
 
         public string ClientGetName()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedString("CLIENT GETNAME");
         }
 
         public string ConfigResetStat()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedString("CONFIG RESETSTAT");
         }
 
         public int CommandCount()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedInteger(" COMMAND COUNT");
         }
 
         public string[] Time()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedArray("TIME");
         }
 
         public string[] Info()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedArray("INFO");
         }
 
         public string[] Info(string section)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedArray("INFO",section);
         }
 
         public string ConfigRewrite()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedString("CONFIG REWRITE");
         }
 
         public string ClientList()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedString("CLIENT LIST");
         }
 
         public string ClientSetName(string name)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedString("CLIENT SETNAME",name);
         }
 
         public string BgSave()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedString("BGSAVE");
         }
 
         public string ScriptKill()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedString("SCRIPT KILL");
         }
 
         public string ScriptLoad(string script)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedString("SCRIPT LOAD",script);
         }
 
         public string[] Eval(string script, int numkeys, string[] keys, string[] args = null)
