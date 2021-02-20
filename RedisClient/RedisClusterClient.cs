@@ -18,12 +18,13 @@ namespace RedisClient
         }
         public static void Load()
         {
-            var redis1 = new RedisClient("127.0.0.1", 6379);
-            var redis2= new RedisClient("127.0.0.1", 6380);
-            var redis3 = new RedisClient("127.0.0.1", 6381);
-            redis1.AddSlave("127.0.0.1", 6382);
-            redis2.AddSlave("127.0.0.1", 6383);
-            redis3.AddSlave("127.0.0.1", 6384);
+            var host = "192.168.2.84";
+            var redis1 = new RedisClient(host, 6379);
+            var redis2= new RedisClient(host, 6380);
+            var redis3 = new RedisClient(host, 6381);
+            redis1.AddSlave(host, 6382);
+            redis2.AddSlave(host, 6383);
+            redis3.AddSlave(host, 6384);
             Master.Add(redis1);
             Master.Add(redis2);
             Master.Add(redis3);
@@ -31,15 +32,11 @@ namespace RedisClient
         private KetamaNodeLocator KetamaNode => new KetamaNodeLocator(Master.Select(x=>x.HostPort).ToList());
         private static readonly List<RedisClient> Master=new List<RedisClient>();
 
-        private RedisClient AllotRedis(string key)
+        public RedisClient AllotRedis(string key)
         {
             var ms = KetamaNode.GetNodes(key);
             Console.WriteLine($"Key:{key}------分配给了{ms}");
             return Master.Find(x=>x.HostPort==ms);
-        }
-        public RedisClient GetRedisClient(string key)
-        {
-            return GetMasterRedisClient(key);
         }
         public RedisClient GetMasterRedisClient(string key)
         {

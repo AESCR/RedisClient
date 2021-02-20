@@ -15,7 +15,10 @@ namespace XRedisTest
         [TestMethod]
         public void TestGetRedisClient()
         {
-           
+            var randomStr = "aescr";
+            var redisClient= redisCluster.GetMasterRedisClient(randomStr);
+            redisClient.Set(randomStr, "100");
+
         }
     }
 }

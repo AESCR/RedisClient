@@ -9,11 +9,11 @@ namespace RedisClient
     public class RedisSocket:IDisposable
     {
         private const string Crlf = "\r\n";
-        Socket socket;
+        Socket _socket;
         BufferedStream _bstream;
         public string Host { get; private set; }
         public int Port { get; private set; }
-        public bool IsConnected => socket?.Connected ?? false;
+        public bool IsConnected => _socket?.Connected ?? false;
         public string Password { get; private set; }
         public RedisSocket(string host, int port,string password)
         {
@@ -26,13 +26,13 @@ namespace RedisClient
         }
         void Connect()
         {
-            if (socket != null) return;
-            socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+            if (_socket != null) return;
+            _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
             {
                 NoDelay = true,
             };
-            socket.Connect(Host, Port);
-            _bstream = new BufferedStream(new NetworkStream(socket), 16 * 1024);
+            _socket.Connect(Host, Port);
+            _bstream = new BufferedStream(new NetworkStream(_socket), 16 * 1024);
             if (string.IsNullOrWhiteSpace(Password)) return;
             if (!SendExpectedOk("Auth", Password))
             {
@@ -53,7 +53,7 @@ namespace RedisClient
             byte[] r = Encoding.UTF8.GetBytes(resp);
             try
             {
-                socket.Send(r);
+                _socket.Send(r);
                 return ParseResp();
             }
             catch(Exception e)
@@ -165,7 +165,7 @@ namespace RedisClient
         {
             if (disposing)
             {
-                socket?.Dispose();
+                _socket?.Dispose();
                 _bstream?.Dispose();
             }
         }

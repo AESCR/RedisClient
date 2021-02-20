@@ -7,7 +7,7 @@ namespace RedisClient
 {
     public class RedisClient: IRedisClient
     {
-        private Random random = new Random();
+        private readonly Random _random = new Random();
         public bool IsConnected => _redisSocket?.IsConnected ?? false;
         private readonly RedisSocket _redisSocket;
         public string Host=>_redisSocket.Host;
@@ -17,7 +17,7 @@ namespace RedisClient
         private readonly List<RedisClient> _slaveClient = new List<RedisClient>();
         public RedisClient GetRandomSlaveClient()
         {
-            var index= random.Next(0, _slaveClient.Count);
+            var index= _random.Next(0, _slaveClient.Count);
             return _slaveClient[index];
         }
         public void AddSlave(string host, int port= 6379, string password="")
