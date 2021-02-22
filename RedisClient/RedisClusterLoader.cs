@@ -55,6 +55,20 @@ namespace RedisClient
             Init();
         }
 
+        public List<string> GetClusterStatus()
+        {
+            List<string> status=new List<string>();
+            var testRedis = _redisCollection.OrderByDescending(x => x.IsRootNode).ToList();
+            Console.WriteLine("***************************************");
+            foreach (var test in testRedis)
+            {
+                var tstr = $"主机：{test.HostPort},写:{test.IsRootNode},有效:{!test.IsDisable}";
+                status.Add(tstr);
+                Console.WriteLine(tstr);
+            }
+            Console.WriteLine("***************************************");
+            return status;
+        }
         private List<string> NowNodes => _redisCollection.Where(x => x.IsRootNode == true && x.IsDisable == false).Select(x => x.MasterCode).Distinct().ToList();
         private List<RedisOption> _redisCollection = new List<RedisOption>();
         private List<string> _oldNodes = new List<string>();
@@ -109,7 +123,7 @@ namespace RedisClient
         private RedisOption SwitchMaster(string masterCode)
         {
             var oneFind = _redisCollection.Find(x => x.MasterCode == masterCode && x.IsRootNode);
-            var moreRedis = _redisCollection.FindAll(x => x.MasterCode == masterCode && x.IsRootNode == false);
+            var moreRedis = _redisCollection.FindAll(x => x.MasterCode == masterCode&&x.IsDisable==false && x.IsRootNode == false);
             if (oneFind != null)
             {
                 oneFind.IsDisable = true;
@@ -124,7 +138,7 @@ namespace RedisClient
         private void MoveMaster(RedisOption master, RedisOption newMaster)
         {
             master.IsDisable = true;
-            var moreRedis = _redisCollection.FindAll(x => x.MasterCode == master.MasterCode && x.IsRootNode==false&&x.MasterRedis.HostPort == master.HostPort);
+            var moreRedis = _redisCollection.FindAll(x => x.MasterCode == master.MasterCode && x.IsDisable == false && x.IsRootNode==false&&x.MasterRedis.HostPort == master.HostPort);
             foreach (var updateOption in moreRedis)
             {
                 updateOption.SetMasterRedis(newMaster);
@@ -154,7 +168,6 @@ namespace RedisClient
             }
             else
             {
-                slave.IsDisable = true;
                 if (slave.IsRootNode)
                 {
                     return SwitchMaster(slave.MasterCode);
@@ -219,6 +232,7 @@ namespace RedisClient
 
                 AddClusters("002", redis6);
                 AddClusters("003", redis3);
+                Save();
             }
         }
 
@@ -227,7 +241,7 @@ namespace RedisClient
             _redisCollection.Clear();
             if (File.Exists(_saveFile))
             {
-                using (FileStream fileStream = new FileStream(_saveFile, FileMode.Open, FileAccess.Write))
+                using (FileStream fileStream = new FileStream(_saveFile, FileMode.Open, FileAccess.ReadWrite,FileShare.ReadWrite))
                 {
                     StreamReader sr = new StreamReader(fileStream, Encoding.UTF8);
                     var json = sr.ReadToEnd();

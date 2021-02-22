@@ -649,7 +649,15 @@ namespace RedisClient
 
         public bool Ping()
         {
-            return _redisSocket.SendExpectedString("Ping")== "PONG";
+            try
+            {
+                return _redisSocket.SendExpectedString("Ping") == "PONG";
+            }
+            catch
+            {
+                return false;
+            }
+           
         }
 
         public string Quit()

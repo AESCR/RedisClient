@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using RedisClient;
 using XLibrary.Random;
 
@@ -13,12 +14,14 @@ namespace XRedisTest
         [TestMethod]
         public void TestGetRedisClient()
         {
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 1000; i++)
             {
-                var randomStr = "aescr"+ i;
+                var index = i;
+                var randomStr = "aescr" + index;
                 var redisClient = redisCluster.Set(randomStr, "100");
+                 redisCluster.Get(randomStr);
             }
-        
+
         }
     }
 }

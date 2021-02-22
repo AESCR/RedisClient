@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace RedisClient
 {
@@ -7,6 +8,10 @@ namespace RedisClient
         public int DbIndex = 0;
         private readonly AllotRedisClient _allotRedisClient = new AllotRedisClient();
 
+        public List<string> GetClusterStatus()
+        {
+            return _allotRedisClient.GetRedisClusterLoader().GetClusterStatus();
+        }
         public bool Set(string key, string value)
         {
             var redis= _allotRedisClient.GetWriteClient(key, DbIndex);
