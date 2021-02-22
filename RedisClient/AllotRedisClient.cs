@@ -32,7 +32,7 @@ namespace RedisClient
 {
     public class AllotRedisClient
     {
-        private readonly Random _random = new Random();
+     
         private readonly RedisClusterLoader _redisClusterLoader = new RedisClusterLoader();
 
         public RedisClusterLoader GetRedisClusterLoader()
@@ -49,10 +49,7 @@ namespace RedisClient
         {
             var nodeKey = GetKetamaNodeLocator(oldPos);
             var masterCode = nodeKey.GetNodes(key);
-            List<RedisOption> redisOptions = _redisClusterLoader.GetCluster(masterCode, read);
-            var index = _random.Next(0, redisOptions.Count);
-            var cluster = redisOptions[index];
-            return cluster;
+            return  _redisClusterLoader.GetCluster(masterCode, read);
         }
 
         public RedisClient GetClient(string key, int dbIndex = 0, bool read = false)

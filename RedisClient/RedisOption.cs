@@ -28,6 +28,10 @@ namespace RedisClient
 {
     public class RedisOption
     {
+        /// <summary>
+        /// redis客户端超时设置 0表示不开启空闲清除
+        /// </summary>
+        public int RedisTimeout { get; set; } = 600;
         private static bool _isCluster = false;
         public RedisOption MasterRedis { get; private set; }
 

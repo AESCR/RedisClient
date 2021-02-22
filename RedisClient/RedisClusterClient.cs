@@ -10,10 +10,15 @@ namespace RedisClient
         public bool Set(string key, string value)
         {
             var redis= _allotRedisClient.GetWriteClient(key, DbIndex);
-            Console.WriteLine($"{redis.HostPort}----{key}");
+            //Console.WriteLine($"{redis.HostPort}----{key}");
             return redis.Set(key, value);
         }
 
-       
+        public string Get(string key)
+        {
+            var redis = _allotRedisClient.GetReadClient(key, DbIndex);
+            return redis.Get(key);
+        }
+
     }
 }

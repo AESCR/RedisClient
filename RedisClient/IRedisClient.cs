@@ -787,7 +787,7 @@ namespace RedisClient
         /// 通常用于测试与服务器的连接是否仍然生效，或者用于测量延迟值。
         /// </summary>
         /// <returns>如果连接正常就返回一个 PONG ，否则返回一个连接错误。</returns>
-        string Ping();
+        bool Ping();
 
         /// <summary>
         /// 用于关闭与当前客户端与redis服务的连接。 一旦所有等待中的回复(如果有的话)顺利写入到客户端，连接就会被关闭。

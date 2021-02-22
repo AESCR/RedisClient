@@ -647,9 +647,9 @@ namespace RedisClient
             return result;
         }
 
-        public string Ping()
+        public bool Ping()
         {
-            return _redisSocket.SendExpectedString("Ping");
+            return _redisSocket.SendExpectedString("Ping")== "PONG";
         }
 
         public string Quit()
@@ -718,6 +718,10 @@ namespace RedisClient
 
         public bool SlaveOf(string host, int port, string password = "")
         {
+
+            var status = ConfigGet("slaveof");
+            var hostPort= status["slaveof"];
+            if (hostPort == $"{host} {port}") return true;
             var result = _redisSocket.SendExpectedOk("SLAVEOF", host, port.ToString());
             //设置向redis主同步的密码
             if (string.IsNullOrWhiteSpace(password) == false)
