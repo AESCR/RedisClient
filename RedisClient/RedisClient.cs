@@ -1,33 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Text;
 
 namespace RedisClient
 {
-    public class RedisClient: IRedisClient
+    public class RedisClient : IRedisClient
     {
         public bool IsConnected => _redisSocket?.IsConnected ?? false;
         private readonly RedisSocket _redisSocket;
-        public string Host=>_redisSocket.Host;
+        public string Host => _redisSocket.Host;
+
+        public int DbIndex { get; private set; } = 0;
+
         public int Port => _redisSocket.Port;
         public string Password => _redisSocket.Password;
         public string HostPort => $"{Host}:{Port}";
         private bool _disposedValue;
 
-        public RedisClient(RedisOption redisOption)
-        {
-            _redisSocket = new RedisSocket(redisOption.Host, redisOption.Port, redisOption.Password);
-        }
         public RedisClient(string host, string password) : this(host, 6379, password)
         {
         }
+
         public RedisClient(string host) : this(host, 6379, "")
         {
         }
+
         public RedisClient(string host, int port) : this(host, port, "")
         {
         }
+
         public RedisClient(string host, int port, string password)
         {
             _redisSocket = new RedisSocket(host, port, password);
@@ -37,6 +38,7 @@ namespace RedisClient
         {
             return _redisSocket.SendCommand(cmd, args);
         }
+
         public string Type(string key)
         {
             return _redisSocket.SendExpectedString("Type", key);
@@ -102,9 +104,9 @@ namespace RedisClient
             return _redisSocket.SendExpectedInteger("RenameNx", key, newKey);
         }
 
-        public int Exists(string key)
+        public bool Exists(string key)
         {
-            return _redisSocket.SendExpectedInteger("Exists", key);
+            return _redisSocket.SendExpectedInteger("Exists", key) == 1;
         }
 
         public int ExpireAt(string key, long timestamp)
@@ -476,10 +478,12 @@ namespace RedisClient
         {
             return _redisSocket.SendExpectedArray("SRandMember", key, count.ToString());
         }
+
         public string SRandMember(string key)
         {
             return _redisSocket.SendExpectedString("SRandMember", key);
         }
+
         public string[] SMembers(string key)
         {
             return _redisSocket.SendExpectedArray("SMembers", key);
@@ -633,9 +637,14 @@ namespace RedisClient
             return _redisSocket.SendExpectedString("Echo", message);
         }
 
-        public string Select(int index)
+        public bool Select(int index)
         {
-            return _redisSocket.SendExpectedString("Select", index.ToString());
+            var result = _redisSocket.SendExpectedOk("Select", index.ToString());
+            if (result)
+            {
+                DbIndex = index;
+            }
+            return result;
         }
 
         public string Ping()
@@ -681,7 +690,7 @@ namespace RedisClient
         public Dictionary<string, string> ConfigGet(string parameters)
         {
             Dictionary<string, string> dic = new Dictionary<string, string>();
-            var result = _redisSocket.SendExpectedArray("Config Get", parameters);
+            var result = _redisSocket.SendExpectedArray("Config", "Get", parameters);
             for (int i = 0; i < result.Length;)
             {
                 dic.Add(result[i], result[i + 1]);
@@ -693,7 +702,7 @@ namespace RedisClient
         public Dictionary<string, string> ConfigGet()
         {
             Dictionary<string, string> dic = new Dictionary<string, string>();
-            var result = _redisSocket.SendExpectedArray("Config Get");
+            var result = _redisSocket.SendExpectedArray("CONFIG", "GET", "*");
             for (int i = 0; i < result.Length;)
             {
                 dic.Add(result[i], result[i + 1]);
@@ -707,13 +716,13 @@ namespace RedisClient
             return _redisSocket.SendExpectedArray("Command");
         }
 
-        public bool SlaveOf(string host, int port,string password="")
+        public bool SlaveOf(string host, int port, string password = "")
         {
-            var result= _redisSocket.SendExpectedOk("SLAVEOF", host, port.ToString());
+            var result = _redisSocket.SendExpectedOk("SLAVEOF", host, port.ToString());
             //设置向redis主同步的密码
-            if (string.IsNullOrWhiteSpace(password)==false)
+            if (string.IsNullOrWhiteSpace(password) == false)
             {
-                 ConfigSet("masterauth", password);
+                ConfigSet("masterauth", password);
             }
             return result;
         }
@@ -730,7 +739,7 @@ namespace RedisClient
 
         public string FlushAll()
         {
-              return _redisSocket.SendExpectedString("FlushAll");
+            return _redisSocket.SendExpectedString("FlushAll");
         }
 
         public int DbSize()
@@ -750,13 +759,14 @@ namespace RedisClient
 
         public bool ConfigSet(string parameter, string value)
         {
-            return _redisSocket.SendExpectedOk("CLUSTER SLOTS");
+            return _redisSocket.SendExpectedOk("Config", "Set", parameter,value);
         }
 
         public string[] CommandInfo(params string[] commands)
         {
-            return _redisSocket.SendExpectedArray("COMMAND INFO",commands);
+            return _redisSocket.SendExpectedArray("COMMAND INFO", commands);
         }
+
         public string ShutDown()
         {
             return _redisSocket.SendExpectedString("SHUTDOWN");
@@ -769,7 +779,7 @@ namespace RedisClient
 
         public string ClientKill(string host, int port)
         {
-            return _redisSocket.SendExpectedString("CLIENT KILL",$"{host}:{port}");
+            return _redisSocket.SendExpectedString("CLIENT KILL", $"{host}:{port}");
         }
 
         public string[] Role()
@@ -784,7 +794,7 @@ namespace RedisClient
 
         public string[] CommandGetKeys(params string[] parameters)
         {
-            return _redisSocket.SendExpectedArray("COMMAND GETKEYS",parameters);
+            return _redisSocket.SendExpectedArray("COMMAND GETKEYS", parameters);
         }
 
         public string ClientGetName()
@@ -814,7 +824,7 @@ namespace RedisClient
 
         public string[] Info(string section)
         {
-            return _redisSocket.SendExpectedArray("INFO",section);
+            return _redisSocket.SendExpectedArray("INFO", section);
         }
 
         public string ConfigRewrite()
@@ -829,7 +839,7 @@ namespace RedisClient
 
         public string ClientSetName(string name)
         {
-            return _redisSocket.SendExpectedString("CLIENT SETNAME",name);
+            return _redisSocket.SendExpectedString("CLIENT SETNAME", name);
         }
 
         public string BgSave()
@@ -844,7 +854,7 @@ namespace RedisClient
 
         public string ScriptLoad(string script)
         {
-            return _redisSocket.SendExpectedString("SCRIPT LOAD",script);
+            return _redisSocket.SendExpectedString("SCRIPT LOAD", script);
         }
 
         public string[] Eval(string script, int numkeys, string[] keys, string[] args = null)
@@ -969,6 +979,30 @@ namespace RedisClient
             throw new NotImplementedException();
         }
 
+        public bool Migrate(string[] key, string host, int port = 6379, string password = "", int db = 0, int timeout = 5000, bool copy = false,
+            bool replace = true)
+        {
+            var param = new List<string>
+            {
+                host,
+                port.ToString(),
+                password,
+                db.ToString(),
+                timeout.ToString()
+            };
+            if (copy)
+            {
+                param.Add("copy");
+            }
+            if (replace)
+            {
+                param.Add("replace");
+            }
+            param.Add("keys");
+            param.AddRange(key);
+            return _redisSocket.SendExpectedOk("migrate", param.ToArray()); ;
+        }
+
         protected virtual void Dispose(bool disposing)
         {
             if (!_disposedValue)
@@ -990,6 +1024,7 @@ namespace RedisClient
             // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
             Dispose(disposing: false);
         }
+
         public void Dispose()
         {
             // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中

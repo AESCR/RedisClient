@@ -1,12 +1,13 @@
 ﻿#region << 版 本 注 释 >>
+
 /*----------------------------------------------------------------
 // Copyright (C) 2017 单位 运管家
-// 版权所有。 
+// 版权所有。
 //
 // 文件名：AllotRedisClient
 // 文件功能描述：
 //
-// 
+//
 // 创建者：名字 AESCR
 // 时间：2021/2/20 11:05:11
 //
@@ -20,69 +21,77 @@
 //
 // 版本：V1.0.0
 //----------------------------------------------------------------*/
-#endregion
+
+#endregion << 版 本 注 释 >>
+
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using XRedis;
 
 namespace RedisClient
 {
     public class AllotRedisClient
     {
-        private Random random=new Random();
-        private RedisClusterLoader redisCluster=new RedisClusterLoader();
+        private readonly Random _random = new Random();
+        private readonly RedisClusterLoader _redisClusterLoader = new RedisClusterLoader();
 
-        private RedisClusterOption GetCluster(string key,bool readOnly=false, bool oldPos=false)
+        public RedisClusterLoader GetRedisClusterLoader()
         {
-            var ketamaNodeLocator = oldPos ? new KetamaNodeLocator(redisCluster.GetNodeList()) : new KetamaNodeLocator(redisCluster.GetOldNodeList());
-            var nodeKey = ketamaNodeLocator.GetNodes(key);
-            List<RedisClusterOption> redisOptions;
-            if (readOnly)
-            {
-                 redisOptions = redisCluster.GetReadCluster(nodeKey);
-            }
-            else
-            {
-                redisOptions = redisCluster.GetWriteCluster(nodeKey);
-            }
-            var index = random.Next(0, redisOptions.Count);
+            return _redisClusterLoader;
+        }
+        private KetamaNodeLocator GetKetamaNodeLocator(bool oldPos = false)
+        {
+            KetamaNodeLocator ketamaNodeLocator = oldPos ? new KetamaNodeLocator(_redisClusterLoader.GetOldNodes()) : new KetamaNodeLocator(_redisClusterLoader.GetNodes());
+            return ketamaNodeLocator;
+        }
+
+        private RedisOption GetCluster(string key, bool read = false, bool oldPos = false)
+        {
+            var nodeKey = GetKetamaNodeLocator(oldPos);
+            var masterCode = nodeKey.GetNodes(key);
+            List<RedisOption> redisOptions = _redisClusterLoader.GetCluster(masterCode, read);
+            var index = _random.Next(0, redisOptions.Count);
             var cluster = redisOptions[index];
             return cluster;
         }
-        public RedisClient GetReadClient(string key)
+
+        public RedisClient GetClient(string key, int dbIndex = 0, bool read = false)
+        {
+            var redis = read ? GetReadClient(key, dbIndex) : GetWriteClient(key, dbIndex);
+            return redis;
+        }
+
+        public RedisClient GetReadClient(string key, int dbIndex = 0)
         {
             var cluster = GetCluster(key, true);
-            var redis=new RedisClient(cluster.Host, cluster.Port, cluster.Password);
-            if (redis.Exists(key)==1)
+            var redis = new RedisClient(cluster.Host, cluster.Port, cluster.Password);
+            if (dbIndex > 0)
+            {
+                redis.Select(dbIndex);
+            }
+            if (!_redisClusterLoader.HasOldNodes) return redis;
+            if (redis.Exists(key))
             {
                 return redis;
             }
-            var cluster2 = GetCluster(key,true,true);
-            var redis2= new RedisClient(cluster2.Host, cluster2.Port, cluster2.Password);
-            if (redis2.Exists(key) == 1)
+            var oldCluster = GetCluster(key, false, true);
+            using (var oldRedis = new RedisClient(oldCluster.Host, oldCluster.Port, oldCluster.Password))
             {
-                return redis2;
+                if (oldRedis.Exists(key))
+                {
+                    oldRedis.Migrate(new string[] { key }, cluster.Host, cluster.Port, cluster.Password, dbIndex);
+                }
             }
             return redis;
         }
-        public RedisClient GetWriteClient(string key)
+
+        public RedisClient GetWriteClient(string key, int dbIndex = 0)
         {
             var cluster = GetCluster(key);
             var redis = new RedisClient(cluster.Host, cluster.Port, cluster.Password);
-            if (redis.Exists(key) == 1)
+            if (dbIndex > 0)
             {
-                return redis;
-            }
-            var cluster2 = GetCluster(key, false, true);
-            var redis2 = new RedisClient(cluster2.Host, cluster2.Port, cluster2.Password);
-            if (redis2.Exists(key) == 1)
-            {
-                return redis2;
+                redis.Select(dbIndex);
             }
             return redis;
         }

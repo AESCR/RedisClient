@@ -1,10 +1,9 @@
 using System;
 using System.Linq;
-using System.Threading;
 
 namespace XLibrary.Random
 {
-    public class RandomNum 
+    public class RandomNum
     {
         private readonly System.Random _ra;
 

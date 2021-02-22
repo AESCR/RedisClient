@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace RedisClient
 {
-    public interface IRedisClient:IDisposable
+    public interface IRedisClient : IDisposable
     {
         #region Redis 键(key) 命令
 
@@ -109,7 +108,7 @@ namespace RedisClient
         /// </summary>
         /// <param name="key">键</param>
         /// <returns>若 key 存在返回 1 ，否则返回 0 。</returns>
-        int Exists(string key);
+        bool Exists(string key);
 
         /// <summary>
         /// 以 UNIX 时间戳(unix timestamp)格式设置 key 的过期时间。key 过期后将不再可用。
@@ -126,8 +125,7 @@ namespace RedisClient
         /// <returns>符合给定模式的 key 列表 (Array)。</returns>
         string[] Keys(string pattern);
 
-        #endregion
-
+        #endregion Redis 键(key) 命令
 
         #region Redis 字符串(String) 命令
 
@@ -247,7 +245,7 @@ namespace RedisClient
         string IncrBy(string key, int num);
 
         /// <summary>
-        /// 为 key 中所储存的值加上指定的浮点数增量值。 
+        /// 为 key 中所储存的值加上指定的浮点数增量值。
         /// </summary>
         /// <param name="key">键 如果 key 不存在，那么 INCRBYFLOAT 会先将 key 的值设为 0 ，再执行加法操作。</param>
         /// <param name="fraction">浮点数增量值</param>
@@ -308,7 +306,7 @@ namespace RedisClient
         /// <returns>执行 INCR 命令之后 key 的值。</returns>
         string Incr(string key);
 
-        #endregion
+        #endregion Redis 字符串(String) 命令
 
         #region Redis 列表(List) 命令
 
@@ -460,12 +458,12 @@ namespace RedisClient
         /// <returns>执行 Rpushx 操作后，列表的长度。</returns>
         int RPushX(string key, params string[] values);
 
-        #endregion
+        #endregion Redis 列表(List) 命令
 
         #region Redis 哈希(Hash) 命令
 
         /// <summary>
-        /// 用于同时将多个 field-value (字段-值)对设置到哈希表中。 此命令会覆盖哈希表中已存在的字段。 
+        /// 用于同时将多个 field-value (字段-值)对设置到哈希表中。 此命令会覆盖哈希表中已存在的字段。
         /// </summary>
         /// <param name="key">键 如果哈希表不存在，会创建一个空哈希表，并执行 HMSET 操作。</param>
         /// <param name="kV">字段-值</param>
@@ -481,7 +479,7 @@ namespace RedisClient
         string[] HmGet(string key, params string[] fields);
 
         /// <summary>
-        /// 用于为哈希表中的字段赋值 
+        /// 用于为哈希表中的字段赋值
         /// </summary>
         /// <param name="key">
         /// 如果哈希表不存在，一个新的哈希表被创建并进行 HSET 操作。
@@ -571,7 +569,7 @@ namespace RedisClient
         /// <returns>设置成功，返回 1 。 如果给定字段已经存在且没有操作被执行，返回 0 。</returns>
         int HSetNx(string key, string field, string value);
 
-        #endregion
+        #endregion Redis 哈希(Hash) 命令
 
         #region Redis 集合(Set) 命令
 
@@ -601,11 +599,13 @@ namespace RedisClient
         /// </param>
         /// <returns></returns>
         string[] SRandMember(string key, int count);
+
         /// <summary>
         /// 用于返回集合中的一个随机元素。
         /// </summary>
         /// <param name="key">键</param>
         string SRandMember(string key);
+
         /// <summary>
         /// 返回集合中的所有的成员。 不存在的集合 key 被视为空集合。
         /// </summary>
@@ -701,7 +701,7 @@ namespace RedisClient
         /// <returns>被移除的随机元素。 当集合不存在或是空集时，返回 nil 。</returns>
         string SPop(string key);
 
-        #endregion
+        #endregion Redis 集合(Set) 命令
 
         #region Redis 有序集合(sorted set) 命令
 
@@ -721,6 +721,7 @@ namespace RedisClient
         /// <param name="max">在有序集合中分数排名较大的成员</param>
         /// <returns>有序集合中成员名称 min 和 max 之间的成员数量; Integer类型。</returns>
         int ZLexCount(string key, string min, string max);
+
         /// <summary>
         /// 用于移除有序集中，指定排名(rank)区间内的所有成员。
         /// </summary>
@@ -729,12 +730,14 @@ namespace RedisClient
         /// <param name="stop"></param>
         /// <returns>被移除成员的数量。</returns>
         int ZRemRangeByRank(string key, int start, int stop);
+
         /// <summary>
         /// 用于计算集合中元素的数量
         /// </summary>
         /// <param name="key">键</param>
         /// <returns>当 key 存在且是有序集类型时，返回有序集的基数。 当 key 不存在时，返回 0 。</returns>
         int ZCard(string key);
+
         /// <summary>
         /// 用于移除有序集中的一个或多个成员，不存在的成员将被忽略
         /// </summary>
@@ -742,6 +745,7 @@ namespace RedisClient
         /// <param name="member"> 在 Redis 2.4 版本以前， ZREM 每次只能删除一个元素。</param>
         /// <returns>被成功移除的成员的数量，不包括被忽略的成员</returns>
         int ZRem(string key, params string[] member);
+
         /// <summary>
         /// 返回有序集中指定成员的排名。其中有序集成员按分数值递增(从小到大)顺序排列。
         /// </summary>
@@ -749,6 +753,7 @@ namespace RedisClient
         /// <param name="member"></param>
         /// <returns>如果成员是有序集 key 的成员，返回 member 的排名。 如果成员不是有序集 key 的成员，返回 nil 。</returns>
         int ZRank(string key, string member);
+
         /// <summary>
         /// 对有序集合中指定成员的分数加上增量 increment
         /// </summary>
@@ -759,7 +764,8 @@ namespace RedisClient
         string ZIncrBy(string key, int increment, string member);
 
         //TODO Redis Zunionstore 命令 Redis Zinterstore 命令 ZRangeByScore
-        #endregion
+
+        #endregion Redis 有序集合(sorted set) 命令
 
         #region Redis 连接 命令
 
@@ -774,7 +780,7 @@ namespace RedisClient
         /// </summary>
         /// <param name="index"></param>
         /// <returns>总是返回 OK 。</returns>
-        string Select(int index);
+        bool Select(int index);
 
         /// <summary>
         /// 使用客户端向 Redis 服务器发送一个 PING ，如果服务器运作正常的话，会返回一个 PONG 。
@@ -822,8 +828,6 @@ namespace RedisClient
         /// <returns>保存成功时返回 OK 。</returns>
         string Save();
 
-
-
         /// <summary>
         /// 返回最近一次 Redis 成功将数据保存到磁盘上的时间，以 UNIX 时间戳格式表示。
         /// </summary>
@@ -831,7 +835,7 @@ namespace RedisClient
         string LastSave();
 
         /// <summary>
-        /// 用于获取 redis 服务的配置参数。  
+        /// 用于获取 redis 服务的配置参数。
         /// </summary>
         /// <param name="parameters">给定配置参数</param>
         /// <returns></returns>
@@ -857,7 +861,7 @@ namespace RedisClient
         /// <param name="port"></param>
         /// <param name="password"></param>
         /// <returns>总是返回 OK 。</returns>
-        bool SlaveOf(string host, int port,string password="");
+        bool SlaveOf(string host, int port, string password = "");
 
         /// <summary>
         /// 一个从属服务器执行命令 SLAVEOF NO ONE 将使得这个从属服务器关闭复制功能，并从从属服务器转变回主服务器，原来同步所得的数据集不会被丢弃。
@@ -1007,11 +1011,11 @@ namespace RedisClient
         /// </summary>
         /// <returns>
         /// 命令返回多行字符串，这些字符串按以下形式被格式化：
-        /// 
+        ///
         /// 每个已连接客户端对应一行（以 LF 分割）
         /// 每行字符串由一系列 属性 = 值 形式的域组成，每个域之间以空格分开
         ///     以下是域的含义：
-        /// 
+        ///
         /// addr ： 客户端的地址和端口
         ///     fd ： 套接字所使用的文件描述符
         ///     age ： 以秒计算的已连接时长
@@ -1029,7 +1033,7 @@ namespace RedisClient
         ///     events ： 文件描述符事件
         ///     cmd ： 最近一次执行的命令
         ///     客户端 flag 可以由以下部分组成：
-        /// 
+        ///
         /// O ： 客户端是 MONITOR 模式下的附属节点（slave）
         /// S ： 客户端是一般模式下（normal）的附属节点
         ///     M ： 客户端是主节点（master）
@@ -1042,30 +1046,34 @@ namespace RedisClient
         /// A : 尽可能快地关闭连接
         ///     N : 未设置任何 flag
         /// 文件描述符事件可以是：
-        /// 
+        ///
         /// r : 客户端套接字（在事件 loop 中）是可读的（readable）
         /// w : 客户端套接字（在事件 loop 中）是可写的（writeable）
         /// </returns>
         string ClientList();
+
         /// <summary>
         /// 用于指定当前连接的名称。
         /// </summary>
         /// <returns></returns>
         string ClientSetName(string name);
+
         /// <summary>
         /// 用于在后台异步保存当前数据库的数据到磁盘。
         /// </summary>
         /// <returns>反馈信息。</returns>
         string BgSave();
 
-        #endregion
+        #endregion Redis 连接 命令
 
         #region Redis 脚本 命令
+
         /// <summary>
         /// 命令用于杀死当前正在运行的 Lua 脚本，当且仅当这个脚本没有执行过任何写操作时，这个命令才生效
         /// </summary>
         /// <returns></returns>
         string ScriptKill();
+
         /// <summary>
         /// 用于将脚本 script 添加到脚本缓存中，但并不立即执行这个脚本。
         /// EVAL 命令也会将脚本添加到脚本缓存中，但是它会立即对输入的脚本进行求值。
@@ -1076,6 +1084,7 @@ namespace RedisClient
         /// </summary>
         /// <returns>给定脚本的 SHA1 校验和</returns>
         string ScriptLoad(string script);
+
         /// <summary>
         /// 使用 Lua 解释器执行脚本。
         /// </summary>
@@ -1085,6 +1094,7 @@ namespace RedisClient
         /// <param name="args"> 附加参数，在 Lua 中通过全局变量 ARGV 数组访问，访问的形式和 KEYS 变量类似( ARGV[1] 、 ARGV[2] ，诸如此类)。</param>
         /// <returns></returns>
         string[] Eval(string script, int numkeys, string[] keys, string[] args = null);
+
         /// <summary>
         /// 根据给定的 sha1 校验码，执行缓存在服务器中的脚本。
         /// </summary>
@@ -1094,6 +1104,7 @@ namespace RedisClient
         /// <param name="args"> 附加参数，在 Lua 中通过全局变量 ARGV 数组访问，访问的形式和 KEYS 变量类似( ARGV[1] 、 ARGV[2] ，诸如此类)。</param>
         /// <returns></returns>
         string[] EvalSha(string sha1, int numkeys, string[] keys, string[] args = null);
+
         /// <summary>
         /// 用于校验指定的脚本是否已经被保存在缓存当中。
         /// </summary>
@@ -1103,38 +1114,44 @@ namespace RedisClient
         /// <param name="args"> 附加参数，在 Lua 中通过全局变量 ARGV 数组访问，访问的形式和 KEYS 变量类似( ARGV[1] 、 ARGV[2] ，诸如此类)。</param>
         /// <returns>一个列表，包含 0 和 1 ，前者表示脚本不存在于缓存，后者表示脚本已经在缓存里面了。</returns>
         string[] ScriptExists(string sha1, int numkeys, string[] keys, string[] args = null);
+
         /// <summary>
         /// 用于清除所有 Lua 脚本缓存。
         /// </summary>
         /// <returns>总是返回 OK</returns>
         string ScriptFlush();
+
         /// <summary>
         /// 用于执行所有事务块内的命令
         /// </summary>
         /// <returns>事务块内所有命令的返回值，按命令执行的先后顺序排列。 当操作被打断时，返回空值 nil 。</returns>
         string[] Exec();
+
         /// <summary>
         /// 用于监视一个(或多个) key ，如果在事务执行之前这个(或这些) key 被其他命令所改动，那么事务将被打断
         /// </summary>
         /// <returns>总是返回 OK 。</returns>
         string Watch(params string[] keys);
+
         /// <summary>
         /// 用于取消事务，放弃执行事务块内的所有命令
         /// </summary>
         /// <returns>总是返回 OK </returns>
         string Discard();
+
         /// <summary>
         /// 用于取消 WATCH 命令对所有 key 的监视。
         /// </summary>
         /// <returns>总是返回 OK 。</returns>
         string UnWatch();
+
         /// <summary>
         /// 用于标记一个事务块的开始。 事务块内的多条命令会按照先后顺序被放进一个队列当中，最后由 EXEC 命令原子性(atomic)地执行
         /// </summary>
         /// <returns>总是返回 OK </returns>
         string Multi();
 
-        #endregion
+        #endregion Redis 脚本 命令
 
         #region Redis HyperLogLog 命令
 
@@ -1145,6 +1162,7 @@ namespace RedisClient
         /// <param name="sourceKey">要合并的键</param>
         /// <returns>返回 OK。</returns>
         string PgMerge(string destKey, params string[] sourceKey);
+
         /// <summary>
         /// 将所有元素参数添加到 HyperLogLog 数据结构中。
         /// </summary>
@@ -1152,6 +1170,7 @@ namespace RedisClient
         /// <param name="element">要存储的元素</param>
         /// <returns>整型，如果至少有个元素被添加返回 1， 否则返回 0。</returns>
         int PfAdd(string key, params string[] element);
+
         /// <summary>
         /// 返回给定 HyperLogLog 的基数估算值。
         /// </summary>
@@ -1159,26 +1178,30 @@ namespace RedisClient
         /// <returns>整数，返回给定 HyperLogLog 的基数值，如果多个 HyperLogLog 则返回基数估值之和。</returns>
         int PfCount(params string[] keys);
 
-        #endregion
+        #endregion Redis HyperLogLog 命令
 
         #region Redis 发布订阅 命令
+
         /// <summary>
         /// 用于退订给定的一个或多个频道的信息。
         /// </summary>
         /// <param name="channel">频道</param>
         /// <returns>这个命令在不同的客户端中有不同的表现。</returns>
         string Unsubscribe(params string[] channel);
+
         /// <summary>
         /// 用于订阅给定的一个或多个频道的信息。
         /// </summary>
         /// <param name="channel">频道</param>
         /// <returns>接收到的信息</returns>
         string Subscribe(params string[] channel);
+
         /// <summary>
         /// 用于查看订阅与发布系统状态，它由数个不同格式的子命令组成。
         /// </summary>
         /// <returns>由活跃频道组成的列表。</returns>
         string PubSub(string subCommand, params string[] argument);
+
         /// <summary>
         /// 用于退订所有给定模式的频道。
         /// </summary>
@@ -1193,6 +1216,7 @@ namespace RedisClient
         /// <param name="message">信息</param>
         /// <returns>接收到信息的订阅者数量。</returns>
         int Publish(string channel, string message);
+
         /// <summary>
         /// 订阅一个或多个符合给定模式的频道。
         /// </summary>
@@ -1200,15 +1224,17 @@ namespace RedisClient
         /// <returns>接收到的信息。</returns>
         string PSubscribe(params string[] pattern);
 
-        #endregion
+        #endregion Redis 发布订阅 命令
 
         #region Redis 地理位置(geo) 命令
+
         /// <summary>
         ///  返回一个或多个位置元素的 Geohash 表示
         /// </summary>
         /// <param name="keys">键</param>
         /// <returns>一个数组， 数组的每个项都是一个 geohash 。 命令返回的 geohash 的位置与用户给定的位置元素的位置一一对应。</returns>
         string[] GeoHash(params string[] keys);
+
         /// <summary>
         /// 从key里返回所有给定位置元素的位置（经度和纬度）。
         /// </summary>
@@ -1218,6 +1244,7 @@ namespace RedisClient
         /// 当给定的位置元素不存在时， 对应的数组项为空值。
         /// </returns>
         string[] GeoPos(params string[] keys);
+
         /// <summary>
         /// 返回两个给定位置之间的距离 命令在计算距离时会假设地球为完美的球形， 在极限情况下， 这一假设最大会造成 0.5% 的误差。
         /// </summary>
@@ -1255,6 +1282,7 @@ namespace RedisClient
         /// DESC: 根据中心的位置， 按照从远到近的方式返回位置元素。</param>
         /// <returns></returns>
         string GeoRadius(string key, decimal longitude, decimal latitude, long radius, string unit = "km", bool withCooRd = false, bool withDist = false, bool withHash = false, int count = -1, int sort = -1);
+
         /// <summary>
         /// 将指定的地理空间位置（纬度、经度、名称）添加到指定的key中
         /// </summary>
@@ -1289,6 +1317,24 @@ namespace RedisClient
         /// <returns></returns>
         string GeoRadiusByMember(string key, string member, long radius, string unit = "km", bool withCooRd = false, bool withDist = false, bool withHash = false, int count = -1, int sort = -1);
 
-        #endregion
+        #endregion Redis 地理位置(geo) 命令
+
+        #region 迁移数据
+
+        /// <summary>
+        /// 将 key 原子性地从当前实例传送到目标实例的指定数据库上，一旦传送成功， key 保证会出现在目标实例上，而当前实例上的 key 会被删除。
+        /// </summary>
+        /// <param name="password"></param>
+        /// <param name="key">迁移多个键</param>
+        /// <param name="host">目标redis的IP地址</param>
+        /// <param name="port">目标redis的端口号</param>
+        /// <param name="db">目标数据库索引</param>
+        /// <param name="timeout">迁移的超时时间（单位毫秒）</param>
+        /// <param name="copy"></param>
+        /// <param name="replace"></param>
+        /// <returns></returns>
+        bool Migrate(string[] key, string host, int port, string password, int db, int timeout, bool copy = false, bool replace = true);
+
+        #endregion 迁移数据
     }
 }

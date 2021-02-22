@@ -28,9 +28,11 @@ namespace XRedis
             return rv & 0xffffffffL; /* Truncate to 32-bits */
         }
     }
+
     public class KetamaNodeLocator
     {
         private SortedList<long, string> ketamaNodes = new SortedList<long, string>();
+
         /// <summary>
         /// 一致性哈希的实现
         /// </summary>
@@ -55,6 +57,7 @@ namespace XRedis
                 }
             }
         }
+
         /// <summary>
         /// 一致性哈希的实现
         /// </summary>
@@ -63,6 +66,7 @@ namespace XRedis
             : this(nodes, 10)
         {
         }
+
         /// <summary>
         /// 通过Key值获取节点
         /// </summary>
@@ -76,8 +80,8 @@ namespace XRedis
             {
                 //得到大于当前key的那个子Map，然后从中取出第一个key，就是大于且离它最近的那个key 说明详见: http://www.javaeye.com/topic/684087
                 var tailMap = from coll in ketamaNodes
-                    where coll.Key > hash
-                    select new { coll.Key };
+                              where coll.Key > hash
+                              select new { coll.Key };
                 if (tailMap == null || tailMap.Count() == 0)
                     key = ketamaNodes.FirstOrDefault().Key;
                 else

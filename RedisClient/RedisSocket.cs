@@ -1,30 +1,32 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
 
 namespace RedisClient
 {
-    public class RedisSocket:IDisposable
+    public class RedisSocket : IDisposable
     {
         private const string Crlf = "\r\n";
-        Socket _socket;
-        BufferedStream _bstream;
+        private Socket _socket;
+        private BufferedStream _bstream;
         public string Host { get; private set; }
         public int Port { get; private set; }
         public bool IsConnected => _socket?.Connected ?? false;
         public string Password { get; private set; }
-        public RedisSocket(string host, int port,string password)
+
+        public RedisSocket(string host, int port, string password)
         {
             Host = host;
             Port = port;
             Password = password;
         }
-        public RedisSocket(string host, int port):this(host,port,"")
+
+        public RedisSocket(string host, int port) : this(host, port, "")
         {
         }
-        void Connect()
+
+        private void Connect()
         {
             if (_socket != null) return;
             _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
@@ -39,6 +41,7 @@ namespace RedisClient
                 throw new Exception("redis 密码认证失败");
             }
         }
+
         public object SendCommand(string cmd, params string[] args)
         {
             Connect();
@@ -56,11 +59,12 @@ namespace RedisClient
                 _socket.Send(r);
                 return ParseResp();
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 throw new Exception("发送Send命令失败！", e);
             }
         }
+
         /// <summary>
         /// 响应结果预期OK
         /// </summary>
@@ -70,6 +74,7 @@ namespace RedisClient
             var resp = SendCommand(cmd, args);
             return resp.ToString()?.ToUpper() == "OK";
         }
+
         /// <summary>
         /// 响应结果预期整数
         /// </summary>
@@ -79,6 +84,7 @@ namespace RedisClient
             var resp = SendCommand(cmd, args);
             return Convert.ToInt32(resp);
         }
+
         /// <summary>
         /// 响应结果预期整数
         /// </summary>
@@ -87,37 +93,42 @@ namespace RedisClient
         {
             var resp = SendCommand(cmd, args);
             var result = resp.ToString();
-            if (result== "nil")
+            if (result == "nil")
             {
                 return null;
             }
             return result;
         }
+
         public string[] SendExpectedArray(string cmd, params string[] args)
         {
             var resp = SendCommand(cmd, args);
             return resp as string[];
         }
+
         private object ParseResp()
         {
             if (!IsConnected) throw new Exception("redis 已断开连接，不可读取响应信息");
-            var c=_bstream.ReadByte();
+            var c = _bstream.ReadByte();
             switch (c)
             {
                 case '+':
                 case ':':
                     return ReadLine();
+
                 case '-':
-                    var error= ReadLine();
-                    throw new Exception("响应错误"+error);
+                    var error = ReadLine();
+                    throw new Exception("响应错误" + error);
                 case '$':
                     return ParseBulkReply();
+
                 case '*':
                     return ParseMultiBulkReply();
             }
             throw new Exception("redis 已断开连接，不可读取响应信息");
         }
-        string ReadLine()
+
+        private string ReadLine()
         {
             StringBuilder sb = new StringBuilder();
             int c;
@@ -131,6 +142,7 @@ namespace RedisClient
             }
             return sb.ToString();
         }
+
         private string[] ParseMultiBulkReply()
         {
             int r = Convert.ToInt32(ReadLine());
@@ -143,7 +155,8 @@ namespace RedisClient
             }
             return result;
         }
-        string Read(int len)
+
+        private string Read(int len)
         {
             if (len < 0)
             {
@@ -160,6 +173,7 @@ namespace RedisClient
             }
             throw new Exception("批量读取长度异常！");
         }
+
         private string ParseBulkReply()
         {
             int r = Convert.ToInt32(ReadLine());

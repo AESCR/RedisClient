@@ -1,12 +1,13 @@
 ﻿#region << 版 本 注 释 >>
+
 /*----------------------------------------------------------------
 // Copyright (C) 2017 单位 运管家
-// 版权所有。 
+// 版权所有。
 //
 // 文件名：RedisCluster
 // 文件功能描述：
 //
-// 
+//
 // 创建者：名字 AESCR
 // 时间：2021/2/20 15:06:40
 //
@@ -20,8 +21,9 @@
 //
 // 版本：V1.0.0
 //----------------------------------------------------------------*/
-#endregion
-using System;
+
+#endregion << 版 本 注 释 >>
+
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -31,212 +33,159 @@ using System.Text.Json;
 namespace RedisClient
 {
     /// <summary>
+    /// 本地集群配置表
+    /// </summary>
+    public class RedisConfig
+    {
+        public List<string> OldNodes { get; set; } = new List<string>();
+        public List<RedisOption> RedisOptions = new List<RedisOption>();
+    }
+
+    /// <summary>
     /// 集群加载器
     /// </summary>
     public class RedisClusterLoader
     {
+        private string _saveFile = "redisConfig.json";
+
         public RedisClusterLoader()
         {
-            Load();
+            Init();
         }
 
-        public List<string> GetNodeList()
+        private List<string> NowNodes => _redisCollection.Where(x => x.IsRootNode == true && x.IsDisable == false).Select(x => x.MasterCode).Distinct().ToList();
+        private List<RedisOption> _redisCollection = new List<RedisOption>();
+        private List<string> _oldNodes = new List<string>();
+        public bool HasOldNodes => _oldNodes.Count > 0;
+
+        public List<RedisOption> GetCluster(string masterCode, bool read = false)
         {
-            lock (RedisClusters)
+            if (read)
             {
-                return RedisClusters.Keys.ToList();
+                return GetReadCluster(masterCode);
             }
-        }
-        public List<string> GetOldNodeList()
-        {
-            var path = "OldNodes.json";
-            if (File.Exists(path))
-            {
-                using (FileStream fileStream = new FileStream(path, FileMode.Open, FileAccess.Write))
-                {
-                    StreamReader sr = new StreamReader(fileStream, Encoding.UTF8);
-                    var json= sr.ReadToEnd();
-                    sr.Close();
-                    fileStream.Close();
-                    return JsonSerializer.Deserialize<List<string>>(json);
-                }
-            }
-            return GetNodeList();
-        }
-        private static readonly Dictionary<string, List<RedisClusterOption>> RedisClusters = new Dictionary<string, List<RedisClusterOption>>();
-        private List<RedisClusterOption> GeRedisCluster(string masterCode)
-        {
-            lock (RedisClusters)
-            {
-                if (!RedisClusters.ContainsKey(masterCode)) return new List<RedisClusterOption>();
-                var slaves = RedisClusters[masterCode].Where(x =>x.IsDisable == false).OrderByDescending(x=>x.IsRootNode).ToList();
-                return slaves;
-            }
+
+            return GetWriteCluster(masterCode);
         }
 
-        public List<RedisClusterOption> GetReadCluster(string masterCode)
+        public List<RedisOption> GetReadCluster(string masterCode)
         {
-            lock (RedisClusters)
-            {
-                if (!RedisClusters.ContainsKey(masterCode)) return new List<RedisClusterOption>();
-                var slaves = RedisClusters[masterCode].Where(x => x.IsDisable == false&&x.CanRead).OrderByDescending(x => x.IsRootNode).ToList();
-                return slaves;
-            }
+            return _redisCollection.FindAll(x => x.MasterCode == masterCode && x.IsDisable == false && x.CanRead);
         }
-        public List<RedisClusterOption> GetWriteCluster(string masterCode)
+
+        public List<RedisOption> GetWriteCluster(string masterCode)
         {
-            lock (RedisClusters)
-            {
-                if (!RedisClusters.ContainsKey(masterCode)) return new List<RedisClusterOption>();
-                var slaves = RedisClusters[masterCode].Where(x => x.IsDisable == false && x.CanWrite).OrderByDescending(x => x.IsRootNode).ToList();
-                return slaves;
-            }
+            return _redisCollection.FindAll(x => x.MasterCode == masterCode && x.IsDisable == false && x.CanWrite);
         }
-        private  RedisClusterOption GeRedisCluster(string masterCode, string host, int port)
+
+        public void AddClusters(string masterCode, RedisOption option)
         {
-            lock (RedisClusters)
+            option.MasterCode = masterCode;
+            option.ToBeEffective = true;
+            var exists = _redisCollection.Exists(x => x.HostPort == option.HostPort);
+            if (exists)
             {
-                if (!RedisClusters.ContainsKey(masterCode)) return null;
-                var slaves = RedisClusters[masterCode].FirstOrDefault(x => x.Host == host && x.Port == port&&x.IsDisable==false);
-                return slaves;
+                return;
             }
+            _redisCollection.Add(option);
         }
-        public  void AddClusters(string masterCode, RedisClusterOption option)
+
+        public void Refresh()
         {
-            lock (RedisClusters)
+            var paras = _redisCollection.AsParallel();
+            paras.ForAll(slave =>
             {
-                if (RedisClusters.ContainsKey(masterCode))
+                using var redis = new RedisClient(slave.Host, slave.Port, slave.Password);
+                if (slave.IsRootNode)
                 {
-                    if (option.MasterRedis == null)
-                    {
-                        var rootNode = RedisClusters[masterCode].Find(x => x.IsRootNode == true && x.IsDisable == false);
-                        if (rootNode !=null)
-                        {
-                            option.MasterRedis = rootNode;
-                        }
-                    }
-                    RedisClusters[masterCode].Add(option);
+                    redis.SlaveOf();
+                    redis.ConfigSet("slave-read-only", "no");
                 }
                 else
                 {
-                    option.MasterRedis = null;
-                    RedisClusters.Add(masterCode, new List<RedisClusterOption>(){ option });
+                    redis.SlaveOf(slave.MasterRedis.Host, slave.MasterRedis.Port, slave.MasterRedis.Password);
                 }
-            }
-
-            Save();
+            });
         }
 
-        public void RefreshSlaveOf(string masterCode,string host,int port)
+        private void Init()
         {
-            var slave = GeRedisCluster(masterCode, host, port);
-            using var redis = new RedisClient(slave.Host, slave.Port, slave.Password);
-            if (slave.IsRootNode)
+            Load();
+            TestLoad();
+            Refresh();
+        }
+
+        private void TestLoad()
+        {
+            if (_redisCollection.Count == 0)
             {
-                redis.SlaveOf();
-            }
-            else
-            {
-                redis.SlaveOf(slave.MasterRedis.Host, slave.MasterRedis.Port, slave.MasterRedis.Password);
+                var host = "192.168.2.84";
+                var redis1 = new RedisOption(host, 6379);
+                var redis2 = new RedisOption(host, 6380);
+                var redis3 = new RedisOption(host, 6381);
+                var redis4 = new RedisOption(host, 6382);
+                var redis5 = new RedisOption(host, 6383);
+                var redis6 = new RedisOption(host, 6384);
+                redis1.SetMasterRedis(redis4);
+                redis2.SetMasterRedis(redis5);
+                redis3.SetMasterRedis(redis6);
+                AddClusters("001", redis4);
+                AddClusters("001", redis1);
+
+                AddClusters("002", redis5);
+                AddClusters("002", redis2);
+
+                AddClusters("002", redis6);
+                AddClusters("003", redis3);
             }
         }
-        public  void RefreshSlaveOf()
+
+        public void Load()
         {
-            lock (RedisClusters)
+            _redisCollection.Clear();
+            if (File.Exists(_saveFile))
             {
-                foreach (string key in RedisClusters.Keys)
+                using (FileStream fileStream = new FileStream(_saveFile, FileMode.Open, FileAccess.Write))
                 {
-                    var slaves = GeRedisCluster(key);
-                    foreach (var slave in slaves)
-                    {
-                        using var redis = new RedisClient(slave.Host, slave.Port, slave.Password);
-                        if (slave.IsRootNode)
-                        {
-                            redis.SlaveOf();
-                        }
-                        else
-                        {
-                            redis.SlaveOf(slave.MasterRedis.Host, slave.MasterRedis.Port, slave.MasterRedis.Password);
-                        }
-                    }
+                    StreamReader sr = new StreamReader(fileStream, Encoding.UTF8);
+                    var json = sr.ReadToEnd();
+                    var redisConfig = JsonSerializer.Deserialize<RedisConfig>(json);
+                    _redisCollection = redisConfig.RedisOptions;
+                    _oldNodes = redisConfig.OldNodes;
                 }
             }
         }
-        /// <summary>
-        /// 读取集群配置文件
-        /// </summary>
-        private void Load()
+
+        public List<string> GetOldNodes()
         {
-            if (RedisClusters.Count == 0)
-            {
-                lock (RedisClusters)
-                {
-                    if (RedisClusters.Count == 0)
-                    {
-                        var host = "192.168.2.84";
-                        var redis1 = new RedisClusterOption(host, 6379);
-                        var redis2 = new RedisClusterOption(host, 6380);
-                        var redis3 = new RedisClusterOption(host, 6381);
-                        var redis4 = new RedisClusterOption(host, 6382);
-                        var redis5= new RedisClusterOption(host, 6383);
-                        var redis6 = new RedisClusterOption(host, 6384);
-                        redis1.MasterRedis = redis4;
-                        redis2.MasterRedis = redis5;
-                        redis3.MasterRedis = redis6;
-                        AddClusters("001", redis4);
-                        AddClusters("001", redis1);
-
-                        AddClusters("002", redis5);
-                        AddClusters("002", redis2);
-
-                        AddClusters("002", redis6);
-                        AddClusters("003", redis3);
-                        RefreshSlaveOf();
-                    }
-                }
-            }
+            return _oldNodes;
         }
+
+        public List<string> GetNodes()
+        {
+            return NowNodes;
+        }
+
         /// <summary>
         /// 保存集群配置文件
         /// </summary>
-        public  bool Save()
+        public void Save()
         {
-         
-            lock (RedisClusters)
+            if (_redisCollection == null) return;
+            _redisCollection.ForEach(x =>
             {
-                var path = (DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000+".json";
-                var json = JsonSerializer.Serialize(RedisClusters);
-                if (File.Exists(path))
+                if (x.ToBeEffective)
                 {
-                    return false;
+                    x.ToBeEffective = false;
                 }
-                using (FileStream fileStream=new FileStream(path,FileMode.CreateNew,FileAccess.Write))
-                {
-                    var bytes = Encoding.UTF8.GetBytes(json);
-                    fileStream.Write(bytes, 0, bytes.Length);
-                    fileStream.Close();
-                }
-                return true;
-            }
-        }
-
-        public bool SaveNodes()
-        {
-            lock (RedisClusters)
+            });
+            var redisConfig = new RedisConfig { RedisOptions = _redisCollection, OldNodes = _oldNodes };
+            using (FileStream fileStream = new FileStream(_saveFile, FileMode.Create, FileAccess.Write))
             {
-                var path ="OldNodes.json";
-                var json = JsonSerializer.Serialize(GetNodeList());
-                if (File.Exists(path))
-                {
-                    return false;
-                }
-                using (FileStream fileStream = new FileStream(path, FileMode.CreateNew, FileAccess.Write))
-                {
-                    var bytes = Encoding.UTF8.GetBytes(json);
-                    fileStream.Write(bytes, 0, bytes.Length);
-                    fileStream.Close();
-                }
-                return true;
+                var json = JsonSerializer.Serialize(redisConfig);
+                var bytes = Encoding.UTF8.GetBytes(json);
+                fileStream.Write(bytes, 0, bytes.Length);
+                fileStream.Close();
             }
         }
     }
