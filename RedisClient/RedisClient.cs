@@ -786,9 +786,13 @@ namespace RedisClient
 
         public string Sync()
         {
-            return _redisSocket.SendExpectedString("Sync");
+            return _redisSocket.SendExpectedString("SYNC");
         }
 
+        public void PSync()
+        {
+            _redisSocket.SendExpectedString("PSync");
+        }
         public string ClientKill(string host, int port)
         {
             return _redisSocket.SendExpectedString("CLIENT KILL", $"{host}:{port}");

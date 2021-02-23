@@ -179,18 +179,21 @@ namespace RedisClient
         {
             foreach (var slave in slaves)
             {
-                using var redis = new RedisClient(slave.Host, slave.Port, slave.Password);
-                if (slave.IsRootNode || slave.IsDisable)
+                using (var redis = new RedisClient(slave.Host, slave.Port, slave.Password))
                 {
-                    redis.SlaveOf();
+                    if (slave.IsRootNode || slave.IsDisable)
+                    {
+                        redis.SlaveOf();
+                    }
+                    else
+                    {
+                        redis.SlaveOf(slave.MasterRedis.Host, slave.MasterRedis.Port, slave.MasterRedis.Password);
+                        redis.Sync();
+                    }
+                    if (slave.IsDisable != false) return;
+                    redis.ConfigSet("slave-read-only", slave.CanWrite ? "no" : "yes");
+                    redis.ConfigSet("timeout", slave.RedisTimeout.ToString());
                 }
-                else
-                {
-                    redis.SlaveOf(slave.MasterRedis.Host, slave.MasterRedis.Port, slave.MasterRedis.Password);
-                }
-                if (slave.IsDisable != false) return;
-                redis.ConfigSet("slave-read-only", slave.CanWrite ? "no" : "yes");
-                redis.ConfigSet("timeout", slave.RedisTimeout.ToString());
             }
          
         }

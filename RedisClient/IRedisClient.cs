@@ -930,6 +930,7 @@ namespace RedisClient
         /// <returns>不明确。</returns>
         string Sync();
 
+        void PSync();
         /// <summary>
         /// 用于关闭客户端连接。
         /// </summary>
