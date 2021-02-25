@@ -13,7 +13,6 @@ namespace RedisClient
         public int DbIndex { get; private set; } = 0;
 
         public int Port => _redisSocket.Port;
-        public string Password => _redisSocket.Password;
         public string HostPort => $"{Host}:{Port}";
         private bool _disposedValue;
 
@@ -657,7 +656,6 @@ namespace RedisClient
             {
                 return false;
             }
-           
         }
 
         public string Quit()
@@ -726,9 +724,8 @@ namespace RedisClient
 
         public bool SlaveOf(string host, int port, string password = "")
         {
-
             var status = ConfigGet("slaveof");
-            var hostPort= status["slaveof"];
+            var hostPort = status["slaveof"];
             if (hostPort == $"{host} {port}") return true;
             var result = _redisSocket.SendExpectedOk("SLAVEOF", host, port.ToString());
             //设置向redis主同步的密码
@@ -771,7 +768,7 @@ namespace RedisClient
 
         public bool ConfigSet(string parameter, string value)
         {
-            return _redisSocket.SendExpectedOk("Config", "Set", parameter,value);
+            return _redisSocket.SendExpectedOk("Config", "Set", parameter, value);
         }
 
         public string[] CommandInfo(params string[] commands)
@@ -793,6 +790,7 @@ namespace RedisClient
         {
             _redisSocket.SendExpectedString("PSync");
         }
+
         public string ClientKill(string host, int port)
         {
             return _redisSocket.SendExpectedString("CLIENT KILL", $"{host}:{port}");

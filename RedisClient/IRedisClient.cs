@@ -931,6 +931,7 @@ namespace RedisClient
         string Sync();
 
         void PSync();
+
         /// <summary>
         /// 用于关闭客户端连接。
         /// </summary>

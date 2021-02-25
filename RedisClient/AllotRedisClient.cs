@@ -24,21 +24,19 @@
 
 #endregion << 版 本 注 释 >>
 
-using System;
-using System.Collections.Generic;
 using XRedis;
 
 namespace RedisClient
 {
     public class AllotRedisClient
     {
-     
         private readonly RedisClusterLoader _redisClusterLoader = new RedisClusterLoader();
 
         public RedisClusterLoader GetRedisClusterLoader()
         {
             return _redisClusterLoader;
         }
+
         private KetamaNodeLocator GetKetamaNodeLocator(bool oldPos = false)
         {
             KetamaNodeLocator ketamaNodeLocator = oldPos ? new KetamaNodeLocator(_redisClusterLoader.GetOldNodes()) : new KetamaNodeLocator(_redisClusterLoader.GetNodes());
@@ -49,7 +47,7 @@ namespace RedisClient
         {
             var nodeKey = GetKetamaNodeLocator(oldPos);
             var masterCode = nodeKey.GetNodes(key);
-            return  _redisClusterLoader.GetCluster(masterCode, read);
+            return _redisClusterLoader.GetCluster(masterCode, read);
         }
 
         public RedisClient GetClient(string key, int dbIndex = 0, bool read = false)

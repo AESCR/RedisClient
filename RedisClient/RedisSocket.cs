@@ -1,50 +1,79 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 
 namespace RedisClient
 {
+   
+
     public class RedisSocket : IDisposable
     {
+        /// <summary>
+        /// 第一次连接
+        /// </summary>
+        private bool _fristConnect = true;
+
         private const string Crlf = "\r\n";
         private Socket _socket;
         private BufferedStream _bstream;
         public string Host { get; private set; }
         public int Port { get; private set; }
         public bool IsConnected => _socket?.Connected ?? false;
-        public string Password { get; private set; }
+        private readonly string _password;
+        private readonly object _lockObject = new object();
 
         public RedisSocket(string host, int port, string password)
         {
             Host = host;
             Port = port;
-            Password = password;
+            _password = password;
         }
 
         public RedisSocket(string host, int port) : this(host, port, "")
         {
         }
 
-        private void Connect()
+        /// <summary>
+        /// Redis服务器进行连接
+        /// </summary>
+        /// <returns>连接状态</returns>
+        public bool Connect()
         {
-            if (IsConnected) return;
-            _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+            if (IsConnected) return IsConnected;
+            if (!_fristConnect)
             {
-                NoDelay = true,
-            };
-            _socket.Connect(Host, Port);
-            _bstream = new BufferedStream(new NetworkStream(_socket), 16 * 1024);
-            if (string.IsNullOrWhiteSpace(Password)) return;
-            if (!SendExpectedOk("Auth", Password))
+                throw new Exception("redis 已断开连接");
+            }
+            lock (_lockObject)
             {
-                throw new Exception("redis 密码认证失败");
+                _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+                {
+                    NoDelay = true,
+                };
+                _socket.Connect(Host, Port);
+                _bstream = new BufferedStream(new NetworkStream(_socket), 16 * 1024);
+                if (Auth(_password))
+                {
+                    _fristConnect = false;
+                }
+                return IsConnected;
             }
         }
 
-        public object SendCommand(string cmd, params string[] args)
+        public bool Auth(string password)
         {
-            Connect();
+            if (!Connect()) return IsConnected;
+            if (string.IsNullOrWhiteSpace(password) != false) return IsConnected;
+            if (SendExpectedOk("Auth", password)) return IsConnected;
+            _fristConnect = false;
+            throw new Exception("redis 密码认证失败");
+        }
+
+        private byte[] GenerateCommandData(string cmd, params string[] args)
+        {
             string resp = "*" + (1 + args.Length) + Crlf;
             resp += "$" + cmd.Length + Crlf + cmd + Crlf;
             foreach (string arg in args)
@@ -54,15 +83,32 @@ namespace RedisClient
                 resp += "$" + argStrLength + Crlf + argStr + Crlf;
             }
             byte[] r = Encoding.UTF8.GetBytes(resp);
+            return r;
+        }
+
+        private bool Send(byte[] data)
+        {
             try
-            { 
-                _socket.Send(r);
-                return ParseResp();
-            }
-            catch (Exception e)
             {
-                throw new Exception("发送Send命令失败！", e);
+                _bstream.Write(data, 0, data.Length);
+                _bstream.Flush();
             }
+            catch
+            {
+                return false;
+            }
+            return true;
+        }
+
+        public RedisAnswer SendCommand(string cmd, params string[] args)
+        {
+            var data = GenerateCommandData(cmd, args);
+            Connect();
+            if (Send(data))
+            {
+                return Parse();
+            }
+            throw new Exception("SendCommand失败！");
         }
 
         /// <summary>
@@ -103,66 +149,64 @@ namespace RedisClient
         public string[] SendExpectedArray(string cmd, params string[] args)
         {
             var resp = SendCommand(cmd, args);
-            return resp as string[];
+            return resp.Type== '*' ? JsonSerializer.Deserialize<string[]>(resp.ToString()) : new string[] { resp.ToString() };
         }
 
-        private object ParseResp()
+        public RedisAnswer Parse()
         {
-            if (!IsConnected) throw new Exception("redis 已断开连接，不可读取响应信息");
-            var c = _bstream.ReadByte();
+            var c = (char)_bstream.ReadByte();
+            var redisAnswer = new RedisAnswer(c);
             switch (c)
             {
                 case '+':
+                    redisAnswer.Analysis = ReadLine();
+                    break;
+
                 case ':':
-                    return ReadLine();
+                    redisAnswer.Analysis = Convert.ToInt32(ReadLine());
+                    break;
+
                 case '-':
-                    var error = ReadLine();
-                    throw new Exception("响应错误" + error);
+                    redisAnswer.Analysis = ReadLine();
+                    break;
+
                 case '$':
-                    return ParseBulkReply();
+                    var len = Convert.ToInt32(ReadLine());
+                    byte[] bytes = new byte[len];
+                    _bstream.Read(bytes, 0, bytes.Length);
+                    redisAnswer.Analysis = Encoding.UTF8.GetString(bytes);
+                    SkipLine();
+                    break;
+
                 case '*':
-                    return ParseMultiBulkReply();
+                    var parameterLen = Convert.ToInt32(ReadLine());
+                    RedisAnswer[] redisAnswers = new RedisAnswer[parameterLen];
+                    for (int i = 0; i < parameterLen; i++)
+                    {
+                        redisAnswers[i] = Parse();
+                    }
+                    redisAnswer.Analysis = redisAnswers;
+                    break;
+
                 default:
-                    return (char)c + ReadLine();
+                    throw new Exception("未知类型匹配！");
             }
+
+            return redisAnswer;
         }
 
-       
-
-        private string[] ParseMultiBulkReply()
+        private void SkipLine()
         {
-            int r = Convert.ToInt32(ReadLine());
-            string[] result = new string[r];
-            for (int i = 0; i < r; i++)
+            int c;
+            while ((c = _bstream.ReadByte()) != -1)
             {
-                int c = _bstream.ReadByte();
-                object res = null;
-                switch (c)
-                {
-                    case '+':
-                    case ':':
-                        res=ReadLine();
-                        break;
-                    case '$':
-                        res= ParseBulkReply();
-                        break;
-                    case '*':
-                        res= ParseMultiBulkReply();
-                        break;
-                }
-                result[i] = res?.ToString();
+                if (c == '\r')
+                    continue;
+                if (c == '\n')
+                    break;
             }
-            return result;
         }
 
-
-        private string ParseBulkReply()
-        {
-            int r = Convert.ToInt32(ReadLine());
-            var result= Read(r);
-            _bstream.Flush();
-            return result;
-        }
         private string ReadLine()
         {
             StringBuilder sb = new StringBuilder();
@@ -177,11 +221,10 @@ namespace RedisClient
             }
             return sb.ToString();
         }
-        private string Read(int len)
+
+        public void Close()
         {
-            byte[] bytes=new byte[len];
-            _bstream.Read(bytes, 0, bytes.Length);
-            return Encoding.UTF8.GetString(bytes);
+            _socket?.Close();
         }
         protected virtual void Dispose(bool disposing)
         {

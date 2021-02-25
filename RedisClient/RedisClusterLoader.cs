@@ -57,7 +57,7 @@ namespace RedisClient
 
         public List<string> GetClusterStatus()
         {
-            List<string> status=new List<string>();
+            List<string> status = new List<string>();
             var testRedis = _redisCollection.OrderByDescending(x => x.IsRootNode).ToList();
             Console.WriteLine("***************************************");
             foreach (var test in testRedis)
@@ -69,6 +69,7 @@ namespace RedisClient
             Console.WriteLine("***************************************");
             return status;
         }
+
         private List<string> NowNodes => _redisCollection.Where(x => x.IsRootNode == true && x.IsDisable == false).Select(x => x.MasterCode).Distinct().ToList();
         private List<RedisOption> _redisCollection = new List<RedisOption>();
         private List<string> _oldNodes = new List<string>();
@@ -79,7 +80,7 @@ namespace RedisClient
             RedisOption redisOption;
             if (read)
             {
-                redisOption= GetReadCluster(masterCode);
+                redisOption = GetReadCluster(masterCode);
             }
             else
             {
@@ -90,8 +91,8 @@ namespace RedisClient
 
         public RedisOption GetReadCluster(string masterCode)
         {
-            var results= _redisCollection.FindAll(x => x.MasterCode == masterCode && x.IsDisable == false && x.CanRead && x.IsRootNode == false);
-            if (results.Count==0)
+            var results = _redisCollection.FindAll(x => x.MasterCode == masterCode && x.IsDisable == false && x.CanRead && x.IsRootNode == false);
+            if (results.Count == 0)
             {
                 _redisCollection.FindAll(x => x.MasterCode == masterCode && x.IsDisable == false && x.CanRead);
             }
@@ -99,7 +100,7 @@ namespace RedisClient
             {
                 return results[0];
             }
-            var index= _random.Next(0, results.Count);
+            var index = _random.Next(0, results.Count);
             var result = results[index];
             return result;
         }
@@ -107,11 +108,11 @@ namespace RedisClient
         public RedisOption GetWriteCluster(string masterCode)
         {
             var results = _redisCollection.FindAll(x => x.MasterCode == masterCode && x.IsDisable == false && x.CanWrite);
-            if (results.Count==0)
+            if (results.Count == 0)
             {
                 return SwitchMaster(masterCode);
             }
-            if (results.Count==1)
+            if (results.Count == 1)
             {
                 return results[0];
             }
@@ -123,7 +124,7 @@ namespace RedisClient
         private RedisOption SwitchMaster(string masterCode)
         {
             var oneFind = _redisCollection.Find(x => x.MasterCode == masterCode && x.IsRootNode);
-            var moreRedis = _redisCollection.FindAll(x => x.MasterCode == masterCode&&x.IsDisable==false && x.IsRootNode == false);
+            var moreRedis = _redisCollection.FindAll(x => x.MasterCode == masterCode && x.IsDisable == false && x.IsRootNode == false);
             if (oneFind != null)
             {
                 oneFind.IsDisable = true;
@@ -138,7 +139,7 @@ namespace RedisClient
         private void MoveMaster(RedisOption master, RedisOption newMaster)
         {
             master.IsDisable = true;
-            var moreRedis = _redisCollection.FindAll(x => x.MasterCode == master.MasterCode && x.IsDisable == false && x.IsRootNode==false&&x.MasterRedis.HostPort == master.HostPort);
+            var moreRedis = _redisCollection.FindAll(x => x.MasterCode == master.MasterCode && x.IsDisable == false && x.IsRootNode == false && x.MasterRedis.HostPort == master.HostPort);
             foreach (var updateOption in moreRedis)
             {
                 updateOption.SetMasterRedis(newMaster);
@@ -147,6 +148,7 @@ namespace RedisClient
             Refresh(moreRedis.ToArray());
             Refresh(newMaster);
         }
+
         public void AddClusters(string masterCode, RedisOption option)
         {
             option.MasterCode = masterCode;
@@ -175,6 +177,7 @@ namespace RedisClient
             }
             return GetCluster(slave.MasterCode, !slave.CanWrite);
         }
+
         public void Refresh(params RedisOption[] slaves)
         {
             foreach (var slave in slaves)
@@ -195,8 +198,8 @@ namespace RedisClient
                     redis.ConfigSet("timeout", slave.RedisTimeout.ToString());
                 }
             }
-         
         }
+
         public void RefreshAll()
         {
             var paras = _redisCollection.AsParallel();
@@ -244,7 +247,7 @@ namespace RedisClient
             _redisCollection.Clear();
             if (File.Exists(_saveFile))
             {
-                using (FileStream fileStream = new FileStream(_saveFile, FileMode.Open, FileAccess.ReadWrite,FileShare.ReadWrite))
+                using (FileStream fileStream = new FileStream(_saveFile, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
                 {
                     StreamReader sr = new StreamReader(fileStream, Encoding.UTF8);
                     var json = sr.ReadToEnd();

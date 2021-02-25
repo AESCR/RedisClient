@@ -1,16 +1,16 @@
-﻿using System;
+﻿using RedisClient;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
-using RedisClient;
 using XLibrary.Random;
 
 namespace ConsoleTest
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
-            RandomNum randomNum=new RandomNum();
+            RandomNum randomNum = new RandomNum();
             RedisClusterClient redisCluster = new RedisClusterClient();
             Task.Run(() =>
             {
@@ -32,9 +32,7 @@ namespace ConsoleTest
                 }
                 catch (Exception e)
                 {
-                   
                 }
-               
             }
         }
     }

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace RedisClient
 {
@@ -12,9 +11,10 @@ namespace RedisClient
         {
             return _allotRedisClient.GetRedisClusterLoader().GetClusterStatus();
         }
+
         public bool Set(string key, string value)
         {
-            var redis= _allotRedisClient.GetWriteClient(key, DbIndex);
+            var redis = _allotRedisClient.GetWriteClient(key, DbIndex);
             //Console.WriteLine($"{redis.HostPort}----{key}");
             return redis.Set(key, value);
         }
@@ -24,6 +24,5 @@ namespace RedisClient
             var redis = _allotRedisClient.GetReadClient(key, DbIndex);
             return redis.Get(key);
         }
-
     }
 }
