@@ -1,12 +1,18 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <ILMergeConsolePath>C:\Users\AESCR\.nuget\packages\ilmerge\3.0.29\tools\net452</ILMergeConsolePath>
+    <AppPath>F:\MyWork\RedisClient\ConsoleTest\bin\Debug\netcoreapp3.1</AppPath>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\RedisClient\RedisClient.csproj" />
+    <PackageReference Include="ILMerge" Version="3.0.29" />
   </ItemGroup>
-
+    <Target Name="ILMerge">
+    <!-- the ILMergePath property points to the location of ILMerge.exe console application -->
+    <Exec Command="$(ILMergeConsolePath) $(AppPath)\ConsoleTest.exe ^/out:ConsoleTest.exe" />
+  </Target>
 </Project>
