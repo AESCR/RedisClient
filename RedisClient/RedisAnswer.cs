@@ -24,12 +24,13 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 
 namespace RedisClient
 {
     /// <summary>
-    /// 响应实体
+    /// 实体
     /// </summary>
     public class RedisAnswer
     {
@@ -40,35 +41,39 @@ namespace RedisClient
 
         public char Type { get; }
         public object Analysis { get; set; }
+        public string Response
+        {
+            get
+            {
+                if (Analysis == null)
+                {
+                    return null;
+                }
+
+                if (Type!='*')
+                {
+                    return Analysis.ToString();
+                }
+                List<string> result = new List<string>();
+                if (Analysis is RedisAnswer[] redisAnswers)
+                {
+                    foreach (RedisAnswer answer in redisAnswers)
+                    {
+                        var temp = answer.ToString();
+                        result.Add(temp);
+                    }
+                }
+                var options = new JsonSerializerOptions
+                {
+                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                };
+                return JsonSerializer.Serialize(result, options);
+            }
+        }
 
         public override string ToString()
         {
-            if (Analysis ==null)
-            {
-                return null;
-            }
-            switch (Type)
-            {
-                case '+':
-                case ':':
-                case '-':
-                case '$':
-                    return Analysis.ToString();
-                case '*':
-                    List<string> result = new List<string>();
-                    if (Analysis is RedisAnswer[] redisAnswers)
-                    {
-                        foreach (RedisAnswer answer in redisAnswers)
-                        {
-                            var temp = answer.ToString();
-                            result.Add(temp);
-                        }
-                    }
-                    return JsonSerializer.Serialize(result);
-
-                default:
-                    return JsonSerializer.Serialize(Analysis);
-            }
+            return Response;
         }
     }
 

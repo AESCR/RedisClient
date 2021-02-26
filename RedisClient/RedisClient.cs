@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using RedisClient;
 
-namespace RedisClient
+namespace Aescr.Redis
 {
     public class RedisClient : IRedisClient
     {
@@ -15,6 +16,10 @@ namespace RedisClient
             remove => _redisSocket.Connected -= value;
         }
 
+        public RedisClient():this("127.0.0.1",6379,"")
+        {
+
+        }
         public RedisClient(string connectionStr)
         {
             var  redisConnection = RedisConnection.Parse(connectionStr);
