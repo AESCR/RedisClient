@@ -31,11 +31,16 @@ namespace XRedisTest
     [TestClass]
     public class TestRedisClient
     {
-        private RedisClient.RedisClient redis = new RedisClient.RedisClient("127.0.0.1", 6379);
+        private RedisClient.RedisClient redis = new RedisClient.RedisClient("127.0.0.1");
         [TestMethod]
-        public void TestInfo()
+        public void TestCommandInfo()
         {
-           var x=  redis.Info("replication");
+           var x=  redis.CommandInfo("get", "set", "eval");
+        }
+        [TestMethod]
+        public void TestAdd()
+        {
+            var x= redis.Add("123", TimeSpan.FromSeconds(20));
         }
     }
 }

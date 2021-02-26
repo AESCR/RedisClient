@@ -43,6 +43,10 @@ namespace RedisClient
 
         public override string ToString()
         {
+            if (Analysis ==null)
+            {
+                return null;
+            }
             switch (Type)
             {
                 case '+':
@@ -66,5 +70,12 @@ namespace RedisClient
                     return JsonSerializer.Serialize(Analysis);
             }
         }
+    }
+
+    public class RedisCommand
+    {
+        public string Cmd { get; set; }
+
+        public string[] Args { get; set; }
     }
 }

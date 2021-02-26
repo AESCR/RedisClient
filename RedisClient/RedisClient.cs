@@ -6,38 +6,55 @@ namespace RedisClient
 {
     public class RedisClient : IRedisClient
     {
+        private Snowflake Snowflake => Snowflake.Instance();
         public bool IsConnected => _redisSocket?.IsConnected ?? false;
         private readonly RedisSocket _redisSocket;
-        public string Host => _redisSocket.Host;
-
-        public int DbIndex { get; private set; } = 0;
-
-        public int Port => _redisSocket.Port;
-        public string HostPort => $"{Host}:{Port}";
         private bool _disposedValue;
-
-        public RedisClient(string host, string password) : this(host, 6379, password)
-        {
+        public event EventHandler<EventArgs> Connected 
+            { add => _redisSocket.Connected += value;
+            remove => _redisSocket.Connected -= value;
         }
 
-        public RedisClient(string host) : this(host, 6379, "")
+        public RedisClient(string connectionStr)
+        {
+            var  redisConnection = RedisConnection.Parse(connectionStr);
+            _redisSocket = new RedisSocket(redisConnection);
+        }
+        public RedisClient(string ip, string password) : this(ip, 6379, password)
         {
         }
-
-        public RedisClient(string host, int port) : this(host, port, "")
+        public RedisClient(string ip, int port, string password)
         {
+            _redisSocket = new RedisSocket(ip, port, password);
         }
 
-        public RedisClient(string host, int port, string password)
+        public bool Connect()
         {
-            _redisSocket = new RedisSocket(host, port, password);
+            return _redisSocket.Connect();
         }
-
-        public object SendCommand(string cmd, params string[] args)
+        public RedisAnswer SendCommand(string cmd, params string[] args)
         {
             return _redisSocket.SendCommand(cmd, args);
         }
 
+        public string Add(string value, TimeSpan expiresIn)
+        {
+            var key = Snowflake.GetId();
+            if (!SetNx(key.ToString(), value)) return string.Empty;
+            if (expiresIn != TimeSpan.Zero)
+            {
+                Expire(key.ToString(), expiresIn.Seconds);
+            }
+            return key.ToString();
+        }
+        public string[] SendMultipleCommand(params RedisCommand[] commands)
+        {
+            return _redisSocket.SendMultipleCommands(commands);
+        }
+        public long GetSnowflakeId()
+        {
+            return Snowflake.GetId();
+        }
         public string Type(string key)
         {
             return _redisSocket.SendExpectedString("Type", key);
@@ -118,9 +135,9 @@ namespace RedisClient
             return _redisSocket.SendExpectedArray("Keys", pattern);
         }
 
-        public int SetNx(string key, string value)
+        public bool SetNx(string key, string value)
         {
-            return _redisSocket.SendExpectedInteger("SetNx", key, value);
+            return _redisSocket.SendExpectedInteger("SetNx", key, value)==1;
         }
 
         public string GetRange(string key, int start = 0, int end = -1)
@@ -638,14 +655,11 @@ namespace RedisClient
 
         public bool Select(int index)
         {
-            var result = _redisSocket.SendExpectedOk("Select", index.ToString());
-            if (result)
-            {
-                DbIndex = index;
-            }
+            var result = _redisSocket.Select(index);
             return result;
         }
 
+        public int Database => _redisSocket.Database;
         public bool Ping()
         {
             try
@@ -773,7 +787,13 @@ namespace RedisClient
 
         public string[] CommandInfo(params string[] commands)
         {
-            return _redisSocket.SendExpectedArray("COMMAND INFO", commands);
+            string[] command=new string[commands.Length+1];
+            command[0] = "INFO";
+            for (int i = 1; i < commands.Length+1; i++)
+            {
+                command[i] = commands[i-1];
+            }
+            return _redisSocket.SendExpectedArray("COMMAND", command);
         }
 
         public string ShutDown()
@@ -808,22 +828,28 @@ namespace RedisClient
 
         public string[] CommandGetKeys(params string[] parameters)
         {
-            return _redisSocket.SendExpectedArray("COMMAND GETKEYS", parameters);
+            string[] temp=new string[parameters.Length+1];
+            temp[0] = "GETKEYS";
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                temp[i + 1] = parameters[i];
+            }
+            return _redisSocket.SendExpectedArray("COMMAND", temp);
         }
 
         public string ClientGetName()
         {
-            return _redisSocket.SendExpectedString("CLIENT GETNAME");
+            return _redisSocket.SendExpectedString("CLIENT", "GETNAME");
         }
 
         public string ConfigResetStat()
         {
-            return _redisSocket.SendExpectedString("CONFIG RESETSTAT");
+            return _redisSocket.SendExpectedString("CONFIG", "RESETSTAT");
         }
 
         public int CommandCount()
         {
-            return _redisSocket.SendExpectedInteger(" COMMAND COUNT");
+            return _redisSocket.SendExpectedInteger(" COMMAND", "COUNT");
         }
 
         public string[] Time()
@@ -843,17 +869,17 @@ namespace RedisClient
 
         public string ConfigRewrite()
         {
-            return _redisSocket.SendExpectedString("CONFIG REWRITE");
+            return _redisSocket.SendExpectedString("CONFIG", "REWRITE");
         }
 
         public string ClientList()
         {
-            return _redisSocket.SendExpectedString("CLIENT LIST");
+            return _redisSocket.SendExpectedString("CLIENT", "LIST");
         }
 
         public string ClientSetName(string name)
         {
-            return _redisSocket.SendExpectedString("CLIENT SETNAME", name);
+            return _redisSocket.SendExpectedString("CLIENT", "SETNAME", name);
         }
 
         public string BgSave()
@@ -893,82 +919,92 @@ namespace RedisClient
 
         public string[] Exec()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedArray("Exec");
         }
 
-        public string Watch(params string[] keys)
+        public bool Watch(params string[] keys)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedOk("Watch",keys);
         }
 
-        public string Discard()
+        public bool Discard()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedOk("Discard");
         }
 
-        public string UnWatch()
+        public bool UnWatch()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedOk("UnWatch");
         }
 
-        public string Multi()
+        public bool Multi()
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedOk("Multi");
         }
 
-        public string PgMerge(string destKey, params string[] sourceKey)
+        public bool PgMerge(string destKey, params string[] sourceKey)
         {
-            throw new NotImplementedException();
+            string[] p=new string[sourceKey.Length+1];
+            p[0] = destKey;
+            for (int i = 0; i < sourceKey.Length; i++)
+            {
+                p[i+1] = sourceKey[i];
+            }
+            return _redisSocket.SendExpectedOk("PgMerge",p);
         }
 
-        public int PfAdd(string key, params string[] element)
+        public bool PfAdd(string key, params string[] element)
         {
-            throw new NotImplementedException();
+            string[] p = new string[element.Length + 1];
+            p[0] = key;
+            for (int i = 0; i < element.Length; i++)
+            {
+                p[i + 1] = element[i];
+            }
+            return _redisSocket.SendExpectedInteger("PFADD", p) ==1;
         }
 
         public int PfCount(params string[] keys)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedInteger("PFCOUNT", keys);
         }
-
-        public string Unsubscribe(params string[] channel)
+        public RedisAnswer Unsubscribe(params string[] channel)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommand("Unsubscribe", channel);
         }
-
         public string Subscribe(params string[] channel)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedString("Subscribe", channel);
         }
 
-        public string PubSub(string subCommand, params string[] argument)
+        public string[] PubSub(string subCommand, params string[] argument)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedArray("PUBSUB", argument);
         }
 
-        public string PunSubscribe(string pattern)
+        public RedisAnswer PunSubscribe(string pattern)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendCommand("PunSubscribe", pattern);
         }
 
         public int Publish(string channel, string message)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedInteger("Publish", channel, message);
         }
 
-        public string PSubscribe(params string[] pattern)
+        public string[] PSubscribe(params string[] pattern)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedArray("PSubscribe", pattern);
         }
 
         public string[] GeoHash(params string[] keys)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedArray("GeoHash", keys);
         }
 
         public string[] GeoPos(params string[] keys)
         {
-            throw new NotImplementedException();
+            return _redisSocket.SendExpectedArray("GeoPos", keys);
         }
 
         public string GeoDist(string[] keys, string unit = "km")

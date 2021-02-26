@@ -5,6 +5,27 @@ namespace RedisClient
 {
     public interface IRedisClient : IDisposable
     {
+        #region 自定义命令
+        /// <summary>
+        /// 通过雪花算法获取唯一Id
+        /// </summary>
+        /// <returns></returns>
+        long GetSnowflakeId();
+        /// <summary>
+        /// 自定义Redis命令
+        /// </summary>
+        /// <param name="cmd"></param>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        RedisAnswer SendCommand(string cmd, params string[] args);
+        /// <summary>
+        /// 添加redis字符串
+        /// </summary>
+        /// <param name="value">值</param>
+        /// <param name="expiresIn">过期时间 秒</param>
+        /// <returns>返回Key</returns>
+        string Add(string value, TimeSpan expiresIn);
+        #endregion
         #region Redis 键(key) 命令
 
         /// <summary>
@@ -135,7 +156,7 @@ namespace RedisClient
         /// <param name="key">键</param>
         /// <param name="value">值</param>
         /// <returns>设置成功，返回 1 。 设置失败，返回 0 。</returns>
-        int SetNx(string key, string value);
+        bool SetNx(string key, string value);
 
         /// <summary>
         /// 用于获取存储在指定 key 中字符串的子字符串。字符串的截取范围由 start 和 end 两个偏移量决定(包括 start 和 end 在内)。
@@ -1133,25 +1154,25 @@ namespace RedisClient
         /// 用于监视一个(或多个) key ，如果在事务执行之前这个(或这些) key 被其他命令所改动，那么事务将被打断
         /// </summary>
         /// <returns>总是返回 OK 。</returns>
-        string Watch(params string[] keys);
+        bool Watch(params string[] keys);
 
         /// <summary>
         /// 用于取消事务，放弃执行事务块内的所有命令
         /// </summary>
         /// <returns>总是返回 OK </returns>
-        string Discard();
+        bool Discard();
 
         /// <summary>
         /// 用于取消 WATCH 命令对所有 key 的监视。
         /// </summary>
         /// <returns>总是返回 OK 。</returns>
-        string UnWatch();
+        bool UnWatch();
 
         /// <summary>
         /// 用于标记一个事务块的开始。 事务块内的多条命令会按照先后顺序被放进一个队列当中，最后由 EXEC 命令原子性(atomic)地执行
         /// </summary>
         /// <returns>总是返回 OK </returns>
-        string Multi();
+        bool Multi();
 
         #endregion Redis 脚本 命令
 
@@ -1163,7 +1184,7 @@ namespace RedisClient
         /// <param name="destKey">合并后的键</param>
         /// <param name="sourceKey">要合并的键</param>
         /// <returns>返回 OK。</returns>
-        string PgMerge(string destKey, params string[] sourceKey);
+        bool PgMerge(string destKey, params string[] sourceKey);
 
         /// <summary>
         /// 将所有元素参数添加到 HyperLogLog 数据结构中。
@@ -1171,7 +1192,7 @@ namespace RedisClient
         /// <param name="key">存储的位置</param>
         /// <param name="element">要存储的元素</param>
         /// <returns>整型，如果至少有个元素被添加返回 1， 否则返回 0。</returns>
-        int PfAdd(string key, params string[] element);
+        bool PfAdd(string key, params string[] element);
 
         /// <summary>
         /// 返回给定 HyperLogLog 的基数估算值。
@@ -1189,7 +1210,7 @@ namespace RedisClient
         /// </summary>
         /// <param name="channel">频道</param>
         /// <returns>这个命令在不同的客户端中有不同的表现。</returns>
-        string Unsubscribe(params string[] channel);
+        RedisAnswer Unsubscribe(params string[] channel);
 
         /// <summary>
         /// 用于订阅给定的一个或多个频道的信息。
@@ -1202,14 +1223,14 @@ namespace RedisClient
         /// 用于查看订阅与发布系统状态，它由数个不同格式的子命令组成。
         /// </summary>
         /// <returns>由活跃频道组成的列表。</returns>
-        string PubSub(string subCommand, params string[] argument);
+        string[] PubSub(string subCommand, params string[] argument);
 
         /// <summary>
         /// 用于退订所有给定模式的频道。
         /// </summary>
         /// <param name="pattern">频道</param>
         /// <returns>这个命令在不同的客户端中有不同的表现。</returns>
-        string PunSubscribe(string pattern);
+        RedisAnswer PunSubscribe(string pattern);
 
         /// <summary>
         /// 用于将信息发送到指定的频道。
@@ -1224,7 +1245,7 @@ namespace RedisClient
         /// </summary>
         /// <param name="pattern">每个模式以 * 作为匹配符，比如 it* 匹配所有以 it 开头的频道( it.news 、 it.blog 、 it.tweets 等等)。 news.* 匹配所有以 news. 开头的频道( news.it 、 news.global.today 等等)，诸如此类。</param>
         /// <returns>接收到的信息。</returns>
-        string PSubscribe(params string[] pattern);
+        string[] PSubscribe(params string[] pattern);
 
         #endregion Redis 发布订阅 命令
 

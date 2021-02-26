@@ -3,12 +3,12 @@
 // Copyright (C) 2017 单位 运管家
 // 版权所有。 
 //
-// 文件名：RedisMonitor
+// 文件名：RedisSentinelClient
 // 文件功能描述：
 //
 // 
 // 创建者：名字 AESCR
-// 时间：2021/2/25 15:30:04
+// 时间：2021/2/26 11:41:30
 //
 // 修改人：
 // 时间：
@@ -27,11 +27,7 @@ using System.Text;
 
 namespace RedisClient
 {
-    /// <summary>
-    /// Redis监听 
-    /// </summary>
-    public class RedisMonitor
+    public class RedisSentinelClient
     {
-        List<RedisClient> redisClients=new List<RedisClient>();
     }
 }
