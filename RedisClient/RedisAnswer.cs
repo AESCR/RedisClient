@@ -21,13 +21,12 @@
 // 版本：V1.0.0
 //----------------------------------------------------------------*/
 #endregion
-using System;
+
 using System.Collections.Generic;
-using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 
-namespace RedisClient
+namespace Aescr.Redis
 {
     /// <summary>
     /// 实体
@@ -41,7 +40,8 @@ namespace RedisClient
 
         public char Type { get; }
         public object Analysis { get; set; }
-        public string Response
+
+        private string Response
         {
             get
             {

@@ -21,12 +21,12 @@
 // 版本：V1.0.0
 //----------------------------------------------------------------*/
 #endregion
+
 using System;
-using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace RedisClient
+namespace Aescr.Redis
 {
     public class RedisConnection
     {
@@ -60,7 +60,7 @@ namespace RedisClient
 
             if (!string.IsNullOrWhiteSpace(Prefix)) sb.Append(",prefix=").Append(Prefix);
             if (!string.IsNullOrWhiteSpace(ClientName)) sb.Append(",client name=").Append(ClientName);
-            if (Encoding != Encoding.UTF8) sb.Append(",encoding=").Append(Encoding.BodyName);
+            if (!Equals(Encoding, Encoding.UTF8)) sb.Append(",encoding=").Append(Encoding.BodyName);
 
             if (IdleTimeout != TimeSpan.FromSeconds(20)) sb.Append(",idle timeout=").Append((long)IdleTimeout.TotalMilliseconds);
             if (ConnectTimeout != TimeSpan.FromSeconds(10)) sb.Append(",connect timeout=").Append((long)ConnectTimeout.TotalMilliseconds);

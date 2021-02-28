@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Aescr.Redis;
 
 namespace RedisClient
 {
@@ -113,7 +114,21 @@ namespace RedisClient
             if (SendExpectedOk("Auth", password)) return IsConnected;
             throw new Exception("redis 密码认证失败");
         }
-
+        /// <summary>
+        /// 用来测试连接是否存活，或者测试延迟。
+        /// </summary>
+        /// <returns></returns>
+        public bool Ping()
+        {
+            try
+            {
+                return SendExpectedString("PING","AESCR")=="AESCR";
+            }
+            catch
+            {
+                return false;
+            }
+        }
         private byte[] GenerateCommandData(string cmd, params string[] args)
         {
             string resp = "*" + (1 + args.Length) + Crlf;

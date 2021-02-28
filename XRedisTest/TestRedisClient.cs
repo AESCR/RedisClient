@@ -31,7 +31,7 @@ namespace XRedisTest
     [TestClass]
     public class TestRedisClient
     {
-        private Aescr.Redis.RedisClient redis = new Aescr.Redis.RedisClient("127.0.0.1");
+        private Aescr.Redis.RedisClient redis = new Aescr.Redis.RedisClient("127.0.0.1","byydsj");
         [TestMethod]
         public void TestCommandInfo()
         {
@@ -41,8 +41,18 @@ namespace XRedisTest
         [TestMethod]
         public void TestAdd()
         {
+            var xx= redis.Ping();
             var x= redis.Add("123", TimeSpan.FromSeconds(20));
             Assert.IsTrue(string.IsNullOrWhiteSpace(x)==false);
+        }
+        [TestMethod]
+        public void TestSlaveOf()
+        {
+            for (int i = 1; i < 6; i++)
+            {
+                var r = new Aescr.Redis.RedisClient("127.0.0.1", 6379 +i,"");
+                var x= r.SlaveOf("127.0.0.1", 6379);
+            }
         }
     }
 }

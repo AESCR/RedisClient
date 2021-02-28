@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace RedisClient
+namespace Aescr.Redis
 {
     /// <summary>
     /// 动态生产有规律的ID

@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using RedisClient;
 
-namespace RedisClient
+namespace Aescr.Redis
 {
     public interface IRedisClient : IDisposable
     {
@@ -25,6 +26,12 @@ namespace RedisClient
         /// <param name="expiresIn">过期时间 秒</param>
         /// <returns>返回Key</returns>
         string Add(string value, TimeSpan expiresIn);
+        /// <summary>
+        /// 设置Redis密码
+        /// </summary>
+        /// <param name="newPassword"></param>
+        /// <returns></returns>
+        bool SetPassword(string newPassword);
         #endregion
         #region Redis 键(key) 命令
 

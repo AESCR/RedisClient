@@ -52,6 +52,12 @@ namespace Aescr.Redis
             }
             return key.ToString();
         }
+
+        public bool SetPassword(string newPassword)
+        {
+            return ConfigSet("requirepass", newPassword);
+        }
+
         public string[] SendMultipleCommand(params RedisCommand[] commands)
         {
             return _redisSocket.SendMultipleCommands(commands);
@@ -667,14 +673,7 @@ namespace Aescr.Redis
         public int Database => _redisSocket.Database;
         public bool Ping()
         {
-            try
-            {
-                return _redisSocket.SendExpectedString("Ping") == "PONG";
-            }
-            catch
-            {
-                return false;
-            }
+            return _redisSocket.Ping();
         }
 
         public string Quit()
