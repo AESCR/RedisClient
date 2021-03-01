@@ -157,16 +157,20 @@ namespace Aescr.Redis
             {
                 throw new Exception("与Redis服务器连接失败！");
             }
-            try
+            lock (_lockObject)
             {
-                _bstream.Write(r, 0, r.Length);
-                _bstream.Flush();
+                try
+                {
+                    _bstream.Write(r, 0, r.Length);
+                    _bstream.Flush();
+                }
+                catch
+                {
+                    throw new Exception("SendCommand失败！");
+                }
+                return Parse();
             }
-            catch
-            {
-                throw new Exception("SendCommand失败！");
-            }
-            return Parse();
+          
         }
         public string[] SendMultipleCommands(params RedisCommand[] command)
         {
