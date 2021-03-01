@@ -24,6 +24,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Aescr.Redis;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace XRedisTest
@@ -31,28 +32,15 @@ namespace XRedisTest
     [TestClass]
     public class TestRedisClient
     {
-        private Aescr.Redis.RedisClient redis = new Aescr.Redis.RedisClient("127.0.0.1","byydsj");
+        private readonly RedisClient redis = new RedisClient();
         [TestMethod]
-        public void TestCommandInfo()
+        public void TestConnect()
         {
-           var x=  redis.CommandInfo("get", "set", "eval");
-           Assert.IsTrue(x.Length==3);
+            var connected= redis.IsConnected;
+            Assert.IsFalse(connected);
+            redis.Connect();
+            Assert.IsTrue(redis.IsConnected);
         }
-        [TestMethod]
-        public void TestAdd()
-        {
-            var xx= redis.Ping();
-            var x= redis.Add("123", TimeSpan.FromSeconds(20));
-            Assert.IsTrue(string.IsNullOrWhiteSpace(x)==false);
-        }
-        [TestMethod]
-        public void TestSlaveOf()
-        {
-            for (int i = 1; i < 6; i++)
-            {
-                var r = new Aescr.Redis.RedisClient("127.0.0.1", 6379 +i,"");
-                var x= r.SlaveOf("127.0.0.1", 6379);
-            }
-        }
+       
     }
 }

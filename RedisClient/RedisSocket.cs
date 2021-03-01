@@ -22,9 +22,6 @@ namespace Aescr.Redis
         private Socket _socket;
         private BufferedStream _bstream;
         public bool IsConnected => _socket?.Connected ?? false;
-        public int Database => _connection.Database;
-        public string Prefix => _connection.Prefix;
-        public string ClientName => _connection.ClientName;
         public bool Ssl => _connection.Ssl;
         public Encoding Encoding => _connection.Encoding;
         private readonly object _lockObject = new object();
@@ -60,34 +57,25 @@ namespace Aescr.Redis
         /// <returns>连接状态</returns>
         public bool Connect()
         {
-            if (IsConnected) return IsConnected;
             if (_exit)
             {
-                throw new Exception("redis 已断开连接");
+                throw new Exception("redis 已主动断开连接");
+            }
+
+            if (IsConnected)
+            {
+                return IsConnected;
             }
             var hostPort = SplitHost(_connection.Host);
-            if (IsConnected) return IsConnected;
             lock (_lockObject)
             {
-                if (IsConnected) return IsConnected;
                 _socket.Connect(hostPort.Key, hostPort.Value);
                 _bstream = new BufferedStream(new NetworkStream(_socket), 16 * 1024);
-                if (string.IsNullOrWhiteSpace(_connection.Password) == false)
-                {
-                    if (SendExpectedOk("Auth", _connection.Password) == false)
-                    {
-                        throw new Exception("redis 密码认证失败");
-                    }
-                }
-                if (_connection.Database > 0)
-                {
-                    Select(_connection.Database);
-                }
                 OnConnected();
             }
             return IsConnected;
         }
-
+        
         public static KeyValuePair<string, int> SplitHost(string host)
         {
             if (string.IsNullOrWhiteSpace(host?.Trim()))
@@ -326,23 +314,22 @@ namespace Aescr.Redis
             GC.SuppressFinalize(this);
         }
 
+        public void Auth()
+        {
+            string auth = "ok";
+            if (!string.IsNullOrEmpty(_connection.Password))
+            {
+                auth = SendExpectedString("Auth", _connection.Password);
+            }
+            if (auth.ToLower()!="ok")
+            {
+                throw new Exception($"Redis认证失败！{auth}");
+            }
+        }
         protected virtual void OnConnected()
         {
+            Auth();
             Connected?.Invoke(this, EventArgs.Empty);
-        }
-        /// <summary>
-        /// 切换db
-        /// </summary>
-        /// <param name="index"></param>
-        /// <returns></returns>
-        public bool Select(in int index)
-        {
-            if (!SendExpectedOk("Select", index.ToString()))
-            {
-                return false;
-            };
-            _connection.Database = index;
-            return true;
         }
     }
 }

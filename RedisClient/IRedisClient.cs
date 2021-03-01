@@ -7,6 +7,11 @@ namespace Aescr.Redis
     {
         #region 自定义命令
         /// <summary>
+        /// 获取从服务器
+        /// </summary>
+        /// <returns></returns>
+        RedisClient GetReadOnlyRedis();
+        /// <summary>
         /// 通过雪花算法获取唯一Id
         /// </summary>
         /// <returns></returns>

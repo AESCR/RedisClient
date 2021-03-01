@@ -6,20 +6,13 @@
     <AssemblyName>Aescr.Redis</AssemblyName>
     <Version>5.0</Version>
     <Description>https://github.com/AESCR/RedisClient</Description>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageIcon>微信图片_20201009121034.png</PackageIcon>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DocumentationFile>F:\MyWork\RedisClient\RedisClient\Aescr.Redis.xml</DocumentationFile>
   </PropertyGroup>
-
-  <ItemGroup>
-    <None Include="C:\Users\AESCR\Pictures\微信图片_20201009121034.png">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
-  </ItemGroup>
 
 </Project>
