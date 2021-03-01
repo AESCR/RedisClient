@@ -9,13 +9,7 @@ namespace Aescr.Redis
         private Snowflake Snowflake => Snowflake.Instance();
         public bool IsConnected => _redisSocket?.IsConnected ?? false;
 
-        private  RedisSocket _redisSocket
-        {
-            get
-            {
-                return new RedisSocket("");
-            }
-        }
+        private  RedisSocket _redisSocket;
         private bool _disposedValue;
         public event EventHandler<EventArgs> Connected 
             { add => _redisSocket.Connected += value;
@@ -35,29 +29,44 @@ namespace Aescr.Redis
                 if (t.Role.ToLower()== "master")
                 {
                     hasMaster++;
+                    if (hasMaster==1)
+                    {
+                        _redisSocket=new RedisSocket(connectionStr[index]);
+                    }
+                    if (hasMaster > 1)
+                    {
+                        throw new Exception("连接中存在两个master服务器");
+                    }
                 }
             }
             if (hasMaster==0)
             {
                 _connections[0].Role = "master";
             }
-            if (hasMaster>1)
-            {
-                throw new Exception("连接中存在两个master服务器");
-            }
+          
             _weightedRound = new WeightedRoundRobin(_connections);
         }
-        private RedisClient GetRedis(bool write)
+        public RedisClient GetRedis(bool write=true)
         {
             var r = _weightedRound.GetServer();
-            foreach (var c in _connections)
+            foreach (var t in _connections)
             {
-                if (c.Host == r.Host)
+                if (write)
                 {
-                    return _redisClientFactory.GetRedisClient(c);
+                    if (t.Role.ToLower() != "master")
+                    {
+                        continue;
+                    }
                 }
+                else
+                {
+                    if (t.Host != r.Host)
+                    {
+                       continue;
+                    }
+                }
+                return _redisClientFactory.GetRedisClient(t);
             }
-
             throw new Exception("未获取到服务器");
         }
         public RedisClient():this("127.0.0.1",6379,"")
@@ -69,6 +78,7 @@ namespace Aescr.Redis
             var connection = new RedisConnection {Host = $"{ip}:{port}", Password = password};
             _connections = new[]{ connection };
             _weightedRound = new WeightedRoundRobin(_connections);
+            _redisSocket = new RedisSocket(connection);
 
         }
         public RedisClient(string host, string password)
@@ -76,6 +86,7 @@ namespace Aescr.Redis
             var connection = new RedisConnection {Host = host, Password = password};
             _connections = new[] { connection };
             _weightedRound = new WeightedRoundRobin(_connections);
+            _redisSocket = new RedisSocket(connection);
         }
 
         public bool Connect()
