@@ -33,15 +33,26 @@ namespace Aescr.Redis
         public RedisSocket(string connection)
         {
             _connection = connection;
+            InitSocket();
         }
         public RedisSocket(string ip, int port, string password)
         {
-            var connection = new RedisConnection {Host = $"{ip}:{port}", Password = password};
-            _connection = connection;
+            _connection = new RedisConnection {Host = $"{ip}:{port}", Password = password};
+            InitSocket();
         }
 
         public RedisSocket(string ip, int port) : this(ip, port, "")
         {
+        }
+
+        private void InitSocket()
+        {
+            _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+            {
+                NoDelay = true,
+                ReceiveTimeout = (int)_connection.ReceiveTimeout.TotalMilliseconds,
+                SendTimeout = (int)_connection.SendTimeout.TotalMilliseconds,
+            };
         }
         /// <summary>
         /// Redis服务器进行连接
@@ -54,20 +65,27 @@ namespace Aescr.Redis
             {
                 throw new Exception("redis 已断开连接");
             }
+            var hostPort = SplitHost(_connection.Host);
+            if (IsConnected) return IsConnected;
             lock (_lockObject)
             {
-                _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
-                {
-                    NoDelay = true,
-                    ReceiveTimeout = (int) _connection.ReceiveTimeout.TotalMilliseconds,
-                    SendTimeout = (int) _connection.SendTimeout.TotalMilliseconds,
-                };
-                var hostPort= SplitHost(_connection.Host);
+                if (IsConnected) return IsConnected;
                 _socket.Connect(hostPort.Key, hostPort.Value);
                 _bstream = new BufferedStream(new NetworkStream(_socket), 16 * 1024);
+                if (string.IsNullOrWhiteSpace(_connection.Password) == false)
+                {
+                    if (SendExpectedOk("Auth", _connection.Password) == false)
+                    {
+                        throw new Exception("redis 密码认证失败");
+                    }
+                }
+                if (_connection.Database > 0)
+                {
+                    Select(_connection.Database);
+                }
                 OnConnected();
-                return IsConnected;
             }
+            return IsConnected;
         }
 
         public static KeyValuePair<string, int> SplitHost(string host)
@@ -104,12 +122,6 @@ namespace Aescr.Redis
             }
 
             return new KeyValuePair<string, int>(host, 6379);
-        }
-        public bool Auth()
-        {
-            if (string.IsNullOrWhiteSpace(_connection.Password) != false) return IsConnected;
-            if (SendExpectedOk("Auth", _connection.Password)) return IsConnected;
-            throw new Exception("redis 密码认证失败");
         }
         /// <summary>
         /// 用来测试连接是否存活，或者测试延迟。
@@ -323,11 +335,6 @@ namespace Aescr.Redis
 
         protected virtual void OnConnected()
         {
-            Auth();
-            if (_connection.Database>0)
-            {
-                Select(_connection.Database);
-            }
             Connected?.Invoke(this, EventArgs.Empty);
         }
         /// <summary>

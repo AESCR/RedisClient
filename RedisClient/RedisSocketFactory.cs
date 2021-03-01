@@ -1,5 +1,4 @@
 using System.Collections;
-using RedisClient;
 
 namespace Aescr.Redis
 {
