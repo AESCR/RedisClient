@@ -28,9 +28,10 @@ using System.Text.RegularExpressions;
 
 namespace Aescr.Redis
 {
-    public class RedisConnection
+    public class RedisConnection: WeightedRoundRobinServer
     {
         public string Host { get; set; } = "127.0.0.1:6379";
+        public string Role { get; set; } 
         public bool Ssl { get; set; } = false;
         public string User { get; set; }
         public string Password { get; set; }
@@ -45,7 +46,6 @@ namespace Aescr.Redis
         public int MaxPoolSize { get; set; } = 100;
         public int MinPoolSize { get; set; } = 1;
         public int Retry { get; set; } = 0;
-
         public static implicit operator RedisConnection(string connectionString) => Parse(connectionString);
         public static implicit operator string(RedisConnection connectionString) => connectionString.ToString();
 
@@ -69,6 +69,7 @@ namespace Aescr.Redis
             if (MaxPoolSize != 100) sb.Append(",max pool size=").Append(MaxPoolSize);
             if (MinPoolSize != 1) sb.Append(",min pool size=").Append(MinPoolSize);
             if (Retry != 0) sb.Append(",retry=").Append(Retry);
+            if (!string.IsNullOrWhiteSpace(Role)) sb.Append(",role=").Append(Role);
             return sb.ToString();
         }
 
@@ -107,6 +108,9 @@ namespace Aescr.Redis
                     case "maxpoolsize": if (kv.Length > 1 && int.TryParse(kv[1].Trim(), out var maxPoolSize) && maxPoolSize > 0) ret.MaxPoolSize = maxPoolSize; break;
                     case "minpoolsize": if (kv.Length > 1 && int.TryParse(kv[1].Trim(), out var minPoolSize) && minPoolSize > 0) ret.MinPoolSize = minPoolSize; break;
                     case "retry": if (kv.Length > 1 && int.TryParse(kv[1].Trim(), out var retry) && retry > 0) ret.Retry = retry; break;
+                    case "role":
+                        if (kv.Length > 1) ret.Role = kv[1].Trim();
+                        break;
                 }
             }
             return ret;

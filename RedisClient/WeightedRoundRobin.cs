@@ -21,11 +21,11 @@ namespace Aescr.Redis
         {
            
         }
-        public WeightedRoundRobin(List<WeightedRoundRobinServer> server)
+        public WeightedRoundRobin(IEnumerable<WeightedRoundRobinServer> server)
         {
             s = server.OrderBy(a => a.Weight).ToList(); ;
         }
-        public void Load(List<WeightedRoundRobinServer> server)
+        public void Load(IEnumerable<WeightedRoundRobinServer> server)
         {
             s = server.OrderBy(a => a.Weight).ToList(); ;
         }

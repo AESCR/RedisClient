@@ -8,30 +8,74 @@ namespace Aescr.Redis
     {
         private Snowflake Snowflake => Snowflake.Instance();
         public bool IsConnected => _redisSocket?.IsConnected ?? false;
-        private readonly RedisSocket _redisSocket;
+
+        private  RedisSocket _redisSocket
+        {
+            get
+            {
+                return new RedisSocket("");
+            }
+        }
         private bool _disposedValue;
         public event EventHandler<EventArgs> Connected 
             { add => _redisSocket.Connected += value;
             remove => _redisSocket.Connected -= value;
         }
+        private readonly RedisConnection[] _connections;
+        private readonly WeightedRoundRobin _weightedRound;
+        private readonly RedisClientFactory _redisClientFactory = RedisClientFactory.CreateClientFactory();
+        public RedisClient(params string[] connectionStr)
+        {
+            _connections = new RedisConnection[connectionStr.Length];
+            int hasMaster = 0;
+            for (var index = 0; index < connectionStr.Length; index++)
+            {
+                RedisConnection t = connectionStr[index];
+                _connections[index] = t;
+                if (t.Role.ToLower()== "master")
+                {
+                    hasMaster++;
+                }
+            }
+            if (hasMaster==0)
+            {
+                _connections[0].Role = "master";
+            }
+            if (hasMaster>1)
+            {
+                throw new Exception("连接中存在两个master服务器");
+            }
+            _weightedRound = new WeightedRoundRobin(_connections);
+        }
+        private RedisClient GetRedis(bool write)
+        {
+            var r = _weightedRound.GetServer();
+            foreach (var c in _connections)
+            {
+                if (c.Host == r.Host)
+                {
+                    return _redisClientFactory.GetRedisClient(c);
+                }
+            }
 
+            throw new Exception("未获取到服务器");
+        }
         public RedisClient():this("127.0.0.1",6379,"")
         {
 
         }
-        public RedisClient(string connectionStr)
-        {
-            var  redisConnection = RedisConnection.Parse(connectionStr);
-            _redisSocket = new RedisSocket(redisConnection);
-        }
         public RedisClient(string ip, int port, string password)
         {
-            _redisSocket = new RedisSocket(ip, port, password);
+            var connection = new RedisConnection {Host = $"{ip}:{port}", Password = password};
+            _connections = new[]{ connection };
+            _weightedRound = new WeightedRoundRobin(_connections);
+
         }
         public RedisClient(string host, string password)
         {
-            var (key, value) = RedisSocket.SplitHost(host);
-            _redisSocket = new RedisSocket(key, value, password);
+            var connection = new RedisConnection {Host = host, Password = password};
+            _connections = new[] { connection };
+            _weightedRound = new WeightedRoundRobin(_connections);
         }
 
         public bool Connect()

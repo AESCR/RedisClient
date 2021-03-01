@@ -177,7 +177,7 @@ namespace Aescr.Redis
             lock (_lockObject)
             {
                 if (!SendExpectedOk("Multi")) throw new Exception("SendMultipleCommands Multi返回预期值错误！");
-                foreach (RedisCommand c in command)
+                foreach (var c in command)
                 {
                     SendExpectedQueued(c.Cmd, c.Args);
                 }
