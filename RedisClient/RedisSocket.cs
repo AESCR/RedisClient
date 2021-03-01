@@ -3,16 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Aescr.Redis;
 
-namespace RedisClient
+namespace Aescr.Redis
 {
-   
-
     public class RedisSocket : IDisposable
     {
         /// <summary>
@@ -27,6 +25,7 @@ namespace RedisClient
         public int Database => _connection.Database;
         public string Prefix => _connection.Prefix;
         public string ClientName => _connection.ClientName;
+        public bool Ssl => _connection.Ssl;
         public Encoding Encoding => _connection.Encoding;
         private readonly object _lockObject = new object();
         public event EventHandler<EventArgs> Connected;
@@ -60,13 +59,12 @@ namespace RedisClient
                 _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
                 {
                     NoDelay = true,
+                    ReceiveTimeout = (int) _connection.ReceiveTimeout.TotalMilliseconds,
+                    SendTimeout = (int) _connection.SendTimeout.TotalMilliseconds,
                 };
-                _socket.ReceiveTimeout = (int)_connection.ReceiveTimeout.TotalMilliseconds;
-                _socket.SendTimeout = (int)_connection.SendTimeout.TotalMilliseconds; 
                 var hostPort= SplitHost(_connection.Host);
                 _socket.Connect(hostPort.Key, hostPort.Value);
                 _bstream = new BufferedStream(new NetworkStream(_socket), 16 * 1024);
-                Auth(_connection.Password);
                 OnConnected();
                 return IsConnected;
             }
@@ -107,11 +105,10 @@ namespace RedisClient
 
             return new KeyValuePair<string, int>(host, 6379);
         }
-        public bool Auth(string password)
+        public bool Auth()
         {
-            if (!Connect()) return IsConnected;
-            if (string.IsNullOrWhiteSpace(password) != false) return IsConnected;
-            if (SendExpectedOk("Auth", password)) return IsConnected;
+            if (string.IsNullOrWhiteSpace(_connection.Password) != false) return IsConnected;
+            if (SendExpectedOk("Auth", _connection.Password)) return IsConnected;
             throw new Exception("redis 密码认证失败");
         }
         /// <summary>
@@ -160,7 +157,10 @@ namespace RedisClient
         public RedisAnswer SendCommand(string cmd, params string[] args)
         {
             var data = GenerateCommandData(cmd, args);
-            Connect();
+            if (Connect()==false)
+            {
+                throw new Exception("与Redis服务器连接失败！");
+            }
             if (Send(data))
             {
                 return Parse();
@@ -323,6 +323,11 @@ namespace RedisClient
 
         protected virtual void OnConnected()
         {
+            Auth();
+            if (_connection.Database>0)
+            {
+                Select(_connection.Database);
+            }
             Connected?.Invoke(this, EventArgs.Empty);
         }
         /// <summary>
@@ -332,7 +337,10 @@ namespace RedisClient
         /// <returns></returns>
         public bool Select(in int index)
         {
-            if (!SendExpectedOk("Select", index.ToString())) return false;
+            if (!SendExpectedOk("Select", index.ToString()))
+            {
+                return false;
+            };
             _connection.Database = index;
             return true;
         }

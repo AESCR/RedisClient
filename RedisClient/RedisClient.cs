@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using RedisClient;
 
 namespace Aescr.Redis
 {
@@ -25,12 +24,14 @@ namespace Aescr.Redis
             var  redisConnection = RedisConnection.Parse(connectionStr);
             _redisSocket = new RedisSocket(redisConnection);
         }
-        public RedisClient(string ip, string password) : this(ip, 6379, password)
-        {
-        }
         public RedisClient(string ip, int port, string password)
         {
             _redisSocket = new RedisSocket(ip, port, password);
+        }
+        public RedisClient(string host, string password)
+        {
+            var (key, value) = RedisSocket.SplitHost(host);
+            _redisSocket = new RedisSocket(key, value, password);
         }
 
         public bool Connect()

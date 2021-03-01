@@ -26,7 +26,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using RedisClient;
 
 namespace Aescr.Redis
 {
