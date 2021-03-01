@@ -13,12 +13,12 @@ namespace Aescr.Redis
 
         public static RedisSocket GetRedisSocket(string host,string password="")
         {
-            var hostPort= RedisSocket.SplitHost(host);
+            var (key, value) = RedisSocket.SplitHost(host);
             if (Hashtable.ContainsKey(host))
             {
-                return new RedisSocket(hostPort.Key, hostPort.Value,password);
+                return new RedisSocket(key, value,password);
             }
-            Hashtable.Add(host,new RedisSocket(hostPort.Key, hostPort.Value));
+            Hashtable.Add(host,new RedisSocket(key, value));
             return Hashtable[host] as RedisSocket;
         }
     }
