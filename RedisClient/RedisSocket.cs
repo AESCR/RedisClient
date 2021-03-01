@@ -138,7 +138,11 @@ namespace Aescr.Redis
                 return false;
             }
         }
-        private byte[] GenerateCommandData(string cmd, params string[] args)
+        public RedisAnswer SendCommand(RedisCommand command)
+        {
+            return SendCommand(command.Cmd, command.Args);
+        }
+        public RedisAnswer SendCommand(string cmd, params string[] args)
         {
             string resp = "*" + (1 + args.Length) + Crlf;
             resp += "$" + cmd.Length + Crlf + cmd + Crlf;
@@ -149,37 +153,33 @@ namespace Aescr.Redis
                 resp += "$" + argStrLength + Crlf + argStr + Crlf;
             }
             byte[] r = Encoding.GetBytes(resp);
-            return r;
-        }
-
-        private bool Send(byte[] data)
-        {
-            try
-            {
-                _bstream.Write(data, 0, data.Length);
-                _bstream.Flush();
-            }
-            catch
-            {
-                return false;
-            }
-            return true;
-        }
-
-        public RedisAnswer SendCommand(string cmd, params string[] args)
-        {
-            var data = GenerateCommandData(cmd, args);
             if (Connect()==false)
             {
                 throw new Exception("与Redis服务器连接失败！");
             }
-            if (Send(data))
+            try
             {
-                return Parse();
+                _bstream.Write(r, 0, r.Length);
+                _bstream.Flush();
             }
-            throw new Exception("SendCommand失败！");
+            catch
+            {
+                throw new Exception("SendCommand失败！");
+            }
+            return Parse();
         }
-
+        public string[] SendMultipleCommands(params RedisCommand[] command)
+        {
+            lock (_lockObject)
+            {
+                if (!SendExpectedOk("Multi")) throw new Exception("SendMultipleCommands Multi返回预期值错误！");
+                foreach (RedisCommand c in command)
+                {
+                    SendExpectedQueued(c.Cmd, c.Args);
+                }
+                return SendExpectedArray("Exec");
+            }
+        }
         /// <summary>
         /// 响应结果预期OK
         /// </summary>
@@ -227,18 +227,7 @@ namespace Aescr.Redis
             throw new Exception("预期值应该为Queued");
         }
 
-        public string[] SendMultipleCommands(params RedisCommand[] command)
-        {
-            lock (_lockObject)
-            {
-                if (!SendExpectedOk("Multi")) throw new Exception("SendMultipleCommands Multi返回预期值错误！");
-                foreach (RedisCommand c in command)
-                {
-                    SendExpectedQueued(c.Cmd, c.Args);
-                }
-                return SendExpectedArray("Exec");
-            }
-        }
+    
         public RedisAnswer Parse()
         {
             var c = (char)_bstream.ReadByte();
