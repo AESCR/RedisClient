@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 
-namespace XLibrary.Random
+namespace Aescr.Redis
 {
     public class RandomNum
     {

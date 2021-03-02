@@ -1343,6 +1343,57 @@
             <param name="key"></param>
             <returns></returns>
         </member>
+        <member name="M:Aescr.Redis.RandomNum.GenerateCheckCodeNum(System.Int32)">
+            <summary>
+            生成具有唯一编号的字符串
+            </summary>
+            <returns> The check code number. </returns>
+            <param name="codeCount"> Code count. Max 10 </param>
+        </member>
+        <member name="M:Aescr.Redis.RandomNum.GetRandomArray``1(``0[])">
+            <summary>
+            对一个数组进行随机排序
+            </summary>
+            <typeparam name="T"> 数组的类型 </typeparam>
+            <param name="arr"> 需要随机排序的数组 </param>
+        </member>
+        <member name="M:Aescr.Redis.RandomNum.GetRandomDouble">
+            <summary>
+            生成一个0.0到1.0的随机小数
+            </summary>
+        </member>
+        <member name="M:Aescr.Redis.RandomNum.GetRandomInt(System.Int32,System.Int32)">
+            <summary>
+            生成一个指定范围的随机整数，该随机数范围包括最小值，但不包括最大值
+            </summary>
+            <param name="minNum"> 最小值 </param>
+            <param name="maxNum"> 最大值 </param>
+        </member>
+        <member name="M:Aescr.Redis.RandomNum.GetRandomNum(System.Int32,System.Int32)">
+            <summary>
+            获取一个随机数
+            </summary>
+            <param name="minValue"> </param>
+            <param name="maxValue"> </param>
+            <returns> </returns>
+        </member>
+        <member name="M:Aescr.Redis.RandomNum.GetRandomNums(System.Int32,System.Int32,System.Int32)">
+            <summary>
+            获取一组随机数 不重复
+            </summary>
+            <param name="num"> 随机数个数 </param>
+            <param name="minValue"> 最小值 </param>
+            <param name="maxValue"> 最大值 </param>
+            <returns> </returns>
+        </member>
+        <member name="M:Aescr.Redis.RandomNum.GetRandomString(System.Int32,System.String)">
+            <summary>
+            随机字符串
+            </summary>
+            <param name="stringLength"> </param>
+            <param name="randomString"> </param>
+            <returns> </returns>
+        </member>
         <member name="F:Aescr.Redis.RedisSocket._exit">
             <summary>
             断开连接
