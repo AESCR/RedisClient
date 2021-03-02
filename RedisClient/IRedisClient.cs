@@ -22,7 +22,7 @@ namespace Aescr.Redis
         /// <param name="cmd"></param>
         /// <param name="args"></param>
         /// <returns></returns>
-        RedisAnswer SendCommand(string cmd, params string[] args);
+        RedisResult SendCommand(string cmd, params string[] args);
         /// <summary>
         /// 添加redis字符串
         /// </summary>
@@ -820,6 +820,12 @@ namespace Aescr.Redis
         /// </summary>
         /// <returns>如果连接正常就返回一个 PONG ，否则返回一个连接错误。</returns>
         bool Ping();
+        /// <summary>
+        ///  使用客户端向 Redis 服务器发送一个 PING
+        /// </summary>
+        /// <param name="text">发送的文本</param>
+        /// <returns>响应文本</returns>
+        string Ping(string text);
 
         /// <summary>
         /// 用于关闭与当前客户端与redis服务的连接。 一旦所有等待中的回复(如果有的话)顺利写入到客户端，连接就会被关闭。
@@ -831,8 +837,9 @@ namespace Aescr.Redis
         /// 用于检测给定的密码和配置文件中的密码是否相符
         /// </summary>
         /// <param name="password">密码</param>
+        /// <param name="throwError">抛出错误</param>
         /// <returns></returns>
-        string Auth(string password);
+        bool Auth(string password, bool throwError = false);
 
         /// <summary>
         /// 于阻塞客户端命令一段时间（以毫秒计）。
@@ -1221,7 +1228,7 @@ namespace Aescr.Redis
         /// </summary>
         /// <param name="channel">频道</param>
         /// <returns>这个命令在不同的客户端中有不同的表现。</returns>
-        RedisAnswer Unsubscribe(params string[] channel);
+        RedisResult Unsubscribe(params string[] channel);
 
         /// <summary>
         /// 用于订阅给定的一个或多个频道的信息。
@@ -1241,7 +1248,7 @@ namespace Aescr.Redis
         /// </summary>
         /// <param name="pattern">频道</param>
         /// <returns>这个命令在不同的客户端中有不同的表现。</returns>
-        RedisAnswer PunSubscribe(string pattern);
+        RedisResult PunSubscribe(string pattern);
 
         /// <summary>
         /// 用于将信息发送到指定的频道。

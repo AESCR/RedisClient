@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -126,11 +127,11 @@ namespace Aescr.Redis
                 return false;
             }
         }
-        public RedisAnswer SendCommand(RedisCommand command)
+        public RedisResult SendCommand(RedisCommand command)
         {
             return SendCommand(command.Cmd, command.Args);
         }
-        public RedisAnswer SendCommand(string cmd, params string[] args)
+        public RedisResult SendCommand(string cmd, params string[] args)
         {
             string resp = "*" + (1 + args.Length) + Crlf;
             resp += "$" + cmd.Length + Crlf + cmd + Crlf;
@@ -179,7 +180,7 @@ namespace Aescr.Redis
         public bool SendExpectedOk(string cmd, params string[] args)
         {
             var resp = SendCommand(cmd, args);
-            return resp.ToString()?.ToUpper() == "OK";
+            return resp.Value?.ToUpper() == "OK";
         }
 
         /// <summary>
@@ -189,7 +190,7 @@ namespace Aescr.Redis
         public int SendExpectedInteger(string cmd, params string[] args)
         {
             var resp = SendCommand(cmd, args);
-            return Convert.ToInt32(resp.Analysis);
+            return Convert.ToInt32(resp.Value);
         }
 
         /// <summary>
@@ -199,20 +200,20 @@ namespace Aescr.Redis
         public string SendExpectedString(string cmd, params string[] args)
         {
             var resp = SendCommand(cmd, args);
-            var result = resp.ToString();
+            var result = resp.Value;
             return result;
         }
 
         public string[] SendExpectedArray(string cmd, params string[] args)
         {
             var resp = SendCommand(cmd, args);
-            return resp.Type== '*' ? JsonSerializer.Deserialize<string[]>(resp.ToString()) : new string[] { resp.ToString() };
+            return JsonSerializer.Deserialize<string[]>(resp.Value);
         }
 
         public void SendExpectedQueued(string cmd, params string[] args)
         {
             var resp = SendCommand(cmd, args);
-            if (resp.Analysis.ToString()?.ToUpper()== "QUEUED")
+            if (resp.Value?.ToUpper()== "QUEUED")
             {
                 return ;
             }
@@ -220,44 +221,52 @@ namespace Aescr.Redis
         }
 
     
-        public RedisAnswer Parse()
+        public RedisResult Parse()
         {
             var c = (char)_bstream.ReadByte();
-            var redisAnswer = new RedisAnswer(c);
+            var redisAnswer = new RedisResult(c);
             switch (c)
             {
                 case '+':
-                    redisAnswer.Analysis = ReadLine();
+                    redisAnswer.Value = ReadLine();
                     break;
                 case ':':
-                    redisAnswer.Analysis = Convert.ToInt32(ReadLine());
+                    redisAnswer.Value = ReadLine();
                     break;
-
                 case '-':
-                    redisAnswer.Analysis = ReadLine();
+                    redisAnswer.Value = ReadLine();
                     break;
-
                 case '$':
-                    var len = Convert.ToInt32(ReadLine());
+                    var lenStr = ReadLine();
+                    var len = Convert.ToInt32(lenStr);
+                    redisAnswer.AppendLine(lenStr);
                     if (len==-1)
                     {
-                        redisAnswer.Analysis =null;
+                        redisAnswer.Value = String.Empty;
                         break;
                     }
                     byte[] bytes = new byte[len];
                     _bstream.Read(bytes, 0, bytes.Length);
-                    redisAnswer.Analysis = Encoding.GetString(bytes);
+                    redisAnswer.Value = Encoding.GetString(bytes);
+                    redisAnswer.AppendLine(redisAnswer.Value);
                     SkipLine();
                     break;
 
                 case '*':
-                    var parameterLen = Convert.ToInt32(ReadLine());
-                    RedisAnswer[] redisAnswers = new RedisAnswer[parameterLen];
+                    var parameterlenStr = ReadLine();
+                    var parameterLen = Convert.ToInt32(parameterlenStr);
+                    redisAnswer.AppendLine(parameterlenStr);
+                    RedisResult[] redisAnswers = new RedisResult[parameterLen];
                     for (int i = 0; i < parameterLen; i++)
                     {
                         redisAnswers[i] = Parse();
+                        redisAnswer.AppendLine(redisAnswers[i].Source);
                     }
-                    redisAnswer.Analysis = redisAnswers;
+
+                    JsonSerializerOptions jsonSerializerOptions = new JsonSerializerOptions();
+                    jsonSerializerOptions.Encoder=JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+                    redisAnswer.Value = JsonSerializer.Serialize(redisAnswers.Select(x => x.Value), jsonSerializerOptions);
+                    redisAnswer.NestedValue = redisAnswers;
                     break;
 
                 default:

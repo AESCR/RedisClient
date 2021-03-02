@@ -10,6 +10,7 @@ namespace Aescr.Redis
         public bool IsConnected => _redisSocket?.IsConnected ?? false;
         private  RedisSocket _redisSocket;
         private bool _disposedValue;
+        public int Database { get; private set; }
         public event EventHandler<EventArgs> Connected 
             { add => _redisSocket.Connected += value;
             remove => _redisSocket.Connected -= value;
@@ -20,12 +21,16 @@ namespace Aescr.Redis
 
         private void InitClient(params string[] connectionStr)
         {
-            _connections = new RedisConnection[connectionStr.Length];
-            int hasMaster = 0;
-            for (var index = 0; index < connectionStr.Length; index++)
+            var len = connectionStr.Length - 1;
+            if (len<=0)
             {
-                RedisConnection t = connectionStr[index];
-                _connections[index] = t;
+                len = 1;
+            }
+            _connections = new RedisConnection[len];
+            int hasMaster = 0;
+            int cIndex = 0;
+            foreach (RedisConnection t in connectionStr)
+            {
                 if (t.Role?.ToLower()== "master")
                 {
                     hasMaster++;
@@ -35,15 +40,21 @@ namespace Aescr.Redis
                     }
                     if (hasMaster==1)
                     {
-                        _redisSocket=new RedisSocket(connectionStr[index]);
+                        _redisSocket=new RedisSocket(t);
+                        Database = t.Database;
                     }
-                    
+                }
+                else
+                {
+                    _connections[cIndex] = t;
+                    cIndex++;
                 }
             }
             if (hasMaster==0)
             {
                 _connections[0].Role = "master";
                 _redisSocket=new RedisSocket(_connections[0]);
+                Database = _connections[0].Database;
             }
             _weightedRound = new WeightedRoundRobin(_connections);
         }
@@ -91,7 +102,7 @@ namespace Aescr.Redis
         {
             return _redisSocket.Connect();
         }
-        public RedisAnswer SendCommand(string cmd, params string[] args)
+        public RedisResult SendCommand(string cmd, params string[] args)
         {
             return _redisSocket.SendCommand(cmd, args);
         }
@@ -721,21 +732,40 @@ namespace Aescr.Redis
         public bool Select(int index)
         {
             var result = _redisSocket.SendExpectedOk("Select",index.ToString());
+            if (result)
+            {
+                Database = index;
+            }
             return result;
         }
         public bool Ping()
         {
             return _redisSocket.Ping();
         }
-
+        public string Ping(string text)
+        {
+            return _redisSocket.SendExpectedString("PING", text);
+        }
         public string Quit()
         {
             return _redisSocket.SendExpectedString("Quit");
         }
 
-        public string Auth(string password)
+        public bool Auth(string password,bool throwError=false)
         {
-            return _redisSocket.SendExpectedString("Auth", password);
+            var auth = _redisSocket.SendExpectedString("Auth", password);
+            if (auth.ToLower() != "ok")
+            {
+                if (throwError)
+                {
+                    throw new Exception($"Redis认证失败！{auth}");
+                }
+                return false;
+            }
+            else
+            {
+                return true;
+            }
         }
 
         public string Pause(long timeout)
@@ -1024,7 +1054,7 @@ namespace Aescr.Redis
         {
             return _redisSocket.SendExpectedInteger("PFCOUNT", keys);
         }
-        public RedisAnswer Unsubscribe(params string[] channel)
+        public RedisResult Unsubscribe(params string[] channel)
         {
             return _redisSocket.SendCommand("Unsubscribe", channel);
         }
@@ -1038,7 +1068,7 @@ namespace Aescr.Redis
             return _redisSocket.SendExpectedArray("PUBSUB", argument);
         }
 
-        public RedisAnswer PunSubscribe(string pattern)
+        public RedisResult PunSubscribe(string pattern)
         {
             return _redisSocket.SendCommand("PunSubscribe", pattern);
         }

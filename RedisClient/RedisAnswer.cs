@@ -23,64 +23,52 @@
 #endregion
 
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 
 namespace Aescr.Redis
 {
-    /// <summary>
-    /// 实体
-    /// </summary>
-    public class RedisAnswer
-    {
-        public RedisAnswer(char type)
-        {
-            Type = type;
-        }
-
-        public char Type { get; }
-        public object Analysis { get; set; }
-
-        private string Response
-        {
-            get
-            {
-                if (Analysis == null)
-                {
-                    return null;
-                }
-
-                if (Type!='*')
-                {
-                    return Analysis.ToString();
-                }
-                List<string> result = new List<string>();
-                if (Analysis is RedisAnswer[] redisAnswers)
-                {
-                    foreach (RedisAnswer answer in redisAnswers)
-                    {
-                        var temp = answer.ToString();
-                        result.Add(temp);
-                    }
-                }
-                var options = new JsonSerializerOptions
-                {
-                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-                };
-                return JsonSerializer.Serialize(result, options);
-            }
-        }
-
-        public override string ToString()
-        {
-            return Response;
-        }
-    }
-
     public class RedisCommand
     {
         public string Cmd { get; set; }
 
         public string[] Args { get; set; }
+    }
+
+    public class RedisResult
+    {
+        public RedisResult(char type)
+        {
+            _type = type;
+            _source.AppendLine(_type.ToString());
+        }
+        private char _type { get; }
+        public string Source
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(_source.ToString()))
+                {
+                    return _type + "\r\n"+Value;
+                }
+                else
+                {
+                    return _source.ToString();
+                }
+            }
+        }
+        public string Value{get;set; }
+        public RedisResult[] NestedValue { get; set; }
+        private StringBuilder _source = new StringBuilder();
+        public void AppendLine(string val)
+        {
+            _source.AppendLine(val);
+        }
+        public char GetType()
+        {
+            return _type;
+        }
     }
 }
