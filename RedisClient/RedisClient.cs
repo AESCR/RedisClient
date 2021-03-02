@@ -4,13 +4,14 @@ using System.Globalization;
 
 namespace Aescr.Redis
 {
-    public class RedisClient : IRedisClient
+    public class RedisClient : IRedisClient, IRedisClientAsync
     {
         private Snowflake Snowflake => Snowflake.Instance();
         public bool IsConnected => _redisSocket?.IsConnected ?? false;
+        public string Prefix => _redisSocket?.RedisConnection?.Prefix;
         private  RedisSocket _redisSocket;
         private bool _disposedValue;
-        public int Database { get; private set; }
+        public int Database => _redisSocket.Database;
         public event EventHandler<EventArgs> Connected 
             { add => _redisSocket.Connected += value;
             remove => _redisSocket.Connected -= value;
@@ -41,7 +42,6 @@ namespace Aescr.Redis
                     if (hasMaster==1)
                     {
                         _redisSocket=new RedisSocket(t);
-                        Database = t.Database;
                     }
                 }
                 else
@@ -54,7 +54,6 @@ namespace Aescr.Redis
             {
                 _connections[0].Role = "master";
                 _redisSocket=new RedisSocket(_connections[0]);
-                Database = _connections[0].Database;
             }
             _weightedRound = new WeightedRoundRobin(_connections);
         }
@@ -107,9 +106,18 @@ namespace Aescr.Redis
             return _redisSocket.SendCommand(cmd, args);
         }
 
+        public string GetPrefixKey(string key)
+        {
+            if (string.IsNullOrWhiteSpace(Prefix) ==false)
+            {
+                return _redisSocket.RedisConnection.Prefix + key;
+            }
+            return key;
+        }
         public string Add(string value, TimeSpan expiresIn)
         {
-            var key = Snowflake.GetId();
+            var id = Snowflake.GetId();
+            var key=GetPrefixKey(id.ToString());
             if (!SetNx(key.ToString(), value)) return string.Empty;
             if (expiresIn != TimeSpan.Zero)
             {
@@ -133,22 +141,27 @@ namespace Aescr.Redis
         }
         public string Type(string key)
         {
-            return _redisSocket.SendExpectedString("Type", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("Type", prefixKey);
         }
 
         public int PExpire(string key, long milliseconds)
         {
-            return _redisSocket.SendExpectedInteger("PExpire", key, milliseconds.ToString());
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("PExpire", prefixKey, milliseconds.ToString());
         }
 
         public int PExpireAt(string key, long timestamp)
         {
-            return _redisSocket.SendExpectedInteger("PExpireAt", key, timestamp.ToString());
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("PExpireAt", prefixKey, timestamp.ToString());
         }
 
         public string Rename(string key, string newKey)
         {
-            return _redisSocket.SendExpectedString("Rename", key, newKey);
+            var prefixKey = GetPrefixKey(key);
+            var prefixNewKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("Rename", prefixKey, prefixNewKey);
         }
 
         public int Persist(string key)
@@ -731,11 +744,7 @@ namespace Aescr.Redis
 
         public bool Select(int index)
         {
-            var result = _redisSocket.SendExpectedOk("Select",index.ToString());
-            if (result)
-            {
-                Database = index;
-            }
+            var result = _redisSocket.Select(index);
             return result;
         }
         public bool Ping()
@@ -746,9 +755,9 @@ namespace Aescr.Redis
         {
             return _redisSocket.SendExpectedString("PING", text);
         }
-        public string Quit()
+        public bool Quit()
         {
-            return _redisSocket.SendExpectedString("Quit");
+            return _redisSocket.Quit();
         }
 
         public bool Auth(string password,bool throwError=false)

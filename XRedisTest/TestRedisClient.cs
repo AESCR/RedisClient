@@ -36,8 +36,28 @@ namespace XRedisTest
         [TestMethod]
         public void TestConnect()
         {
-            var connected= redis.IsConnected;
+            var connected = redis.IsConnected;
             Assert.IsFalse(connected);
+            redis.Connect();
+            Assert.IsTrue(redis.IsConnected);
+            var r = redis.Quit();
+            Assert.AreEqual(r, false);
+            redis.Connect();
+            Assert.IsTrue(redis.IsConnected);
+             connected = redis.IsConnected;
+            Assert.IsTrue(connected);
+            redis.Connect();
+            Assert.IsTrue(redis.IsConnected);
+             r = redis.Quit();
+            Assert.AreEqual(r, false);
+            redis.Connect();
+            Assert.IsTrue(redis.IsConnected);
+            connected = redis.IsConnected;
+            Assert.IsTrue(connected);
+            redis.Connect();
+            Assert.IsTrue(redis.IsConnected);
+            r = redis.Quit();
+            Assert.AreEqual(r, false);
             redis.Connect();
             Assert.IsTrue(redis.IsConnected);
         }
@@ -65,6 +85,8 @@ namespace XRedisTest
         {
             var key = redis.Select(1);
             Assert.AreEqual(redis.Database, 1);
+            redis.Select(10);
+            Assert.AreEqual(redis.Database, 10);
         }
         [TestMethod]
         public void TestAppend()
@@ -104,8 +126,8 @@ namespace XRedisTest
         [TestMethod]
         public void TestPing2()
         {
-            var r = redis.Set("123123", "232");
-            Assert.AreEqual(r, true);
+        
         }
+
     }
 }

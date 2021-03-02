@@ -24,10 +24,13 @@ namespace Aescr.Redis
         private BufferedStream _bstream;
         public bool IsConnected => _socket?.Connected ?? false;
         public bool Ssl => _connection.Ssl;
+        public int Database => _connection.Database;
         public Encoding Encoding => _connection.Encoding;
         private readonly object _lockObject = new object();
         public event EventHandler<EventArgs> Connected;
         private readonly RedisConnection _connection;
+        public string Prefix => _connection.Prefix;
+        public RedisConnection RedisConnection => _connection;
         public RedisSocket(string connection)
         {
             _connection = connection;
@@ -45,11 +48,11 @@ namespace Aescr.Redis
 
         private void InitSocket()
         {
-            _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+            _socket ??= new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
             {
                 NoDelay = true,
-                ReceiveTimeout = (int)_connection.ReceiveTimeout.TotalMilliseconds,
-                SendTimeout = (int)_connection.SendTimeout.TotalMilliseconds,
+                ReceiveTimeout = (int) _connection.ReceiveTimeout.TotalMilliseconds,
+                SendTimeout = (int) _connection.SendTimeout.TotalMilliseconds,
             };
         }
         /// <summary>
@@ -58,11 +61,6 @@ namespace Aescr.Redis
         /// <returns>连接状态</returns>
         public bool Connect()
         {
-            if (_exit)
-            {
-                throw new Exception("redis 已主动断开连接");
-            }
-
             if (IsConnected)
             {
                 return IsConnected;
@@ -70,9 +68,17 @@ namespace Aescr.Redis
             var hostPort = SplitHost(_connection.Host);
             lock (_lockObject)
             {
-                _socket.Connect(hostPort.Key, hostPort.Value);
-                _bstream = new BufferedStream(new NetworkStream(_socket), 16 * 1024);
-                OnConnected();
+                try
+                {
+                    InitSocket();
+                    _socket.Connect(hostPort.Key, hostPort.Value);
+                    _bstream = new BufferedStream(new NetworkStream(_socket), 16 * 1024);
+                    OnConnected();
+                }
+                catch
+                {
+                    return false;
+                }
             }
             return IsConnected;
         }
@@ -142,9 +148,9 @@ namespace Aescr.Redis
                 resp += "$" + argStrLength + Crlf + argStr + Crlf;
             }
             byte[] r = Encoding.GetBytes(resp);
-            if (Connect()==false)
+            if (_exit == false)
             {
-                throw new Exception("与Redis服务器连接失败！");
+                Connect();
             }
             lock (_lockObject)
             {
@@ -303,17 +309,23 @@ namespace Aescr.Redis
             return sb.ToString();
         }
 
-        public void Close()
+        public bool Quit()
         {
+            if (IsConnected)
+            {
+                SendExpectedOk("Quit");
+            }
             _socket?.Dispose();
             _bstream?.Dispose();
+            _socket = null;
             _exit = true;
+            return IsConnected;
         }
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)
             {
-                Close();
+                Quit();
             }
         }
 
@@ -335,10 +347,27 @@ namespace Aescr.Redis
                 throw new Exception($"Redis认证失败！{auth}");
             }
         }
-        protected virtual void OnConnected()
+
+        private void InitConnect()
         {
             Auth();
-            Connected?.Invoke(this, EventArgs.Empty);
+            Select(_connection.Database);
+        }
+
+        public bool Select(int index)
+        {
+            var result = SendExpectedOk("Select", index.ToString());
+            if (result)
+            {
+                _connection.Database = index;
+            }
+
+            return result;
+        }
+        protected virtual void OnConnected()
+        {
+             InitConnect();
+             Connected?.Invoke(this, EventArgs.Empty);
         }
     }
 }

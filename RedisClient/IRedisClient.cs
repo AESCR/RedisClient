@@ -831,7 +831,7 @@ namespace Aescr.Redis
         /// 用于关闭与当前客户端与redis服务的连接。 一旦所有等待中的回复(如果有的话)顺利写入到客户端，连接就会被关闭。
         /// </summary>
         /// <returns>总是返回 OK 。</returns>
-        string Quit();
+        bool Quit();
 
         /// <summary>
         /// 用于检测给定的密码和配置文件中的密码是否相符
