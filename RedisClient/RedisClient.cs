@@ -106,11 +106,24 @@ namespace Aescr.Redis
             return _redisSocket.SendCommand(cmd, args);
         }
 
-        public string GetPrefixKey(string key)
+        private string GetPrefixKey(string key)
         {
             if (string.IsNullOrWhiteSpace(Prefix) ==false)
             {
                 return _redisSocket.RedisConnection.Prefix + key;
+            }
+            return key;
+        }
+        private string[] GetPrefixKey(string[] key)
+        {
+            if (string.IsNullOrWhiteSpace(Prefix) == false)
+            {
+                string[] str=new string[key.Length];
+                for (int i = 0; i < key.Length; i++)
+                {
+                    str[i] = _redisSocket.RedisConnection.Prefix + key[i];
+                }
+                return str;
             }
             return key;
         }
@@ -166,12 +179,14 @@ namespace Aescr.Redis
 
         public int Persist(string key)
         {
-            return _redisSocket.SendExpectedInteger("Persist", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("Persist", prefixKey);
         }
 
         public int Move(string key, int dbIndex)
         {
-            return _redisSocket.SendExpectedInteger("Move", key, dbIndex.ToString());
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("Move", prefixKey, dbIndex.ToString());
         }
 
         public string RandomKey()
@@ -181,42 +196,51 @@ namespace Aescr.Redis
 
         public string Dump(string key)
         {
-            return _redisSocket.SendExpectedString("Dump", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("Dump", prefixKey);
         }
 
         public int Ttl(string key)
         {
-            return _redisSocket.SendExpectedInteger("Ttl", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("Ttl", prefixKey);
         }
 
         public int Expire(string key, int second)
         {
-            return _redisSocket.SendExpectedInteger("Expire", key, second.ToString());
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("Expire", prefixKey, second.ToString());
         }
 
         public int Del(string key)
         {
-            return _redisSocket.SendExpectedInteger("Del", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("Del", prefixKey);
         }
 
         public int PTtl(string key)
         {
-            return _redisSocket.SendExpectedInteger("PTtl", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("PTtl", prefixKey);
         }
 
         public int RenameNx(string key, string newKey)
         {
-            return _redisSocket.SendExpectedInteger("RenameNx", key, newKey);
+            var prefixKey = GetPrefixKey(key);
+            var prefixNewKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("RenameNx", prefixKey, prefixNewKey);
         }
 
         public bool Exists(string key)
         {
-            return _redisSocket.SendExpectedInteger("Exists", key) == 1;
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("Exists", prefixKey) == 1;
         }
 
         public int ExpireAt(string key, long timestamp)
         {
-            return _redisSocket.SendExpectedInteger("ExpireAt", key, timestamp.ToString());
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("ExpireAt", prefixKey, timestamp.ToString());
         }
 
         public string[] Keys(string pattern)
@@ -226,12 +250,14 @@ namespace Aescr.Redis
 
         public bool SetNx(string key, string value)
         {
-            return _redisSocket.SendExpectedInteger("SetNx", key, value)==1;
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("SetNx", prefixKey, value)==1;
         }
 
         public string GetRange(string key, int start = 0, int end = -1)
         {
-            return _redisSocket.SendExpectedString("GetRange", key, start.ToString(), end.ToString());
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("GetRange", prefixKey, start.ToString(), end.ToString());
         }
 
         public string MSet(Dictionary<string, string> kv)
@@ -240,7 +266,8 @@ namespace Aescr.Redis
             int index = 0;
             foreach (string key in kv.Keys)
             {
-                result[index] = key;
+                var prefixKey = GetPrefixKey(key);
+                result[index] = prefixKey;
                 result[index + 1] = kv[key];
                 index = index + 2;
             }
@@ -249,42 +276,50 @@ namespace Aescr.Redis
 
         public string SetEx(string key, string value, int timeout)
         {
-            return _redisSocket.SendExpectedString("SetEx", timeout.ToString(), value);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("SetEx", prefixKey, timeout.ToString(), value);
         }
 
         public bool Set(string key, string value)
         {
-            return _redisSocket.SendExpectedOk("Set", key, value);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedOk("Set", prefixKey, value);
         }
 
         public string Get(string key)
         {
-            return _redisSocket.SendExpectedString("Get", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("Get", prefixKey);
         }
 
         public int GetBit(string key, int offset)
         {
-            return _redisSocket.SendExpectedInteger("GetBit", key, offset.ToString());
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("GetBit", prefixKey, offset.ToString());
         }
 
         public int SetBit(string key, int offset, int value)
         {
-            return _redisSocket.SendExpectedInteger("SetBit", key, offset.ToString(), value.ToString());
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("SetBit", prefixKey, offset.ToString(), value.ToString());
         }
 
         public string Decr(string key)
         {
-            return _redisSocket.SendExpectedString("Decr", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("Decr", prefixKey);
         }
 
         public string DecrBy(string key, int num)
         {
-            return _redisSocket.SendExpectedString("DecrBy", key, num.ToString());
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("DecrBy", prefixKey, num.ToString());
         }
 
         public int StrLen(string key)
         {
-            return _redisSocket.SendExpectedInteger("StrLen", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("StrLen", prefixKey);
         }
 
         public int MSetNx(Dictionary<string, string> kv)
@@ -293,7 +328,8 @@ namespace Aescr.Redis
             int index = 0;
             foreach (string key in kv.Keys)
             {
-                result[index] = key;
+                var prefixKey = GetPrefixKey(key);
+                result[index] = prefixKey;
                 result[index + 1] = kv[key];
                 index = index + 2;
             }
@@ -302,53 +338,63 @@ namespace Aescr.Redis
 
         public string IncrBy(string key, int num)
         {
-            return _redisSocket.SendExpectedString("IncrBy", key, num.ToString());
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("IncrBy", prefixKey, num.ToString());
         }
 
         public string IncrByFloat(string key, float fraction)
         {
-            return _redisSocket.SendExpectedString("IncrByFloat", key, fraction.ToString(CultureInfo.InvariantCulture));
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("IncrByFloat", prefixKey, fraction.ToString(CultureInfo.InvariantCulture));
         }
 
         public int SetRange(string key, int offset, string value)
         {
-            return _redisSocket.SendExpectedInteger("SetRange", key, offset.ToString(), value);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("SetRange", prefixKey, offset.ToString(), value);
         }
 
         public string PSetEx(string key, string value, int milliseconds)
         {
-            return _redisSocket.SendExpectedString("PSetEx", key, milliseconds.ToString(), value);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("PSetEx", prefixKey, milliseconds.ToString(), value);
         }
 
         public int Append(string key, string value)
         {
-            return _redisSocket.SendExpectedInteger("Append", key, value);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("Append", prefixKey, value);
         }
 
         public string GetSet(string key, string value)
         {
-            return _redisSocket.SendExpectedString("GetSet", key, value);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("GetSet", prefixKey, value);
         }
 
         public string[] MGet(params string[] keys)
         {
-            return _redisSocket.SendExpectedArray("MGet", keys);
+            var prefixKey = GetPrefixKey(keys);
+            return _redisSocket.SendExpectedArray("MGet", prefixKey);
         }
 
         public string Incr(string key)
         {
-            return _redisSocket.SendExpectedString("Incr", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("Incr", prefixKey);
         }
 
         public string LIndex(string key, int index)
         {
-            return _redisSocket.SendExpectedString("LIndex", key, index.ToString());
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("LIndex", prefixKey, index.ToString());
         }
 
         public int RPush(string key, params string[] values)
         {
             string[] args = new string[values.Length + 1];
-            args[0] = key;
+            var prefixKey = GetPrefixKey(key);
+            args[0] = prefixKey;
             int index = 1;
             foreach (var value in values)
             {
@@ -360,12 +406,15 @@ namespace Aescr.Redis
 
         public string[] LRange(string key, int start = 0, int end = -1)
         {
-            return _redisSocket.SendExpectedArray("LRange", key, start.ToString(), end.ToString());
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedArray("LRange", prefixKey, start.ToString(), end.ToString());
         }
 
         public string[] RPopLPush(string key, string newKey)
         {
-            return _redisSocket.SendExpectedArray("RPopLPush", key, newKey);
+            var prefixKey = GetPrefixKey(key);
+            var prefixNewKey = GetPrefixKey(newKey);
+            return _redisSocket.SendExpectedArray("RPopLPush", prefixKey, prefixNewKey);
         }
 
         public string[] BlPop(string[] key, int timeout)
@@ -374,7 +423,8 @@ namespace Aescr.Redis
             int index = 0;
             foreach (var value in key)
             {
-                args[index] = value;
+                var prefixNewKey = GetPrefixKey(value);
+                args[index] = prefixNewKey;
                 index++;
             }
             args[index] = timeout.ToString();
@@ -387,7 +437,8 @@ namespace Aescr.Redis
             int index = 0;
             foreach (var value in keys)
             {
-                args[index] = value;
+                var prefixNewKey = GetPrefixKey(value);
+                args[index] = prefixNewKey;
                 index++;
             }
             args[index] = timeout.ToString();
@@ -396,33 +447,40 @@ namespace Aescr.Redis
 
         public string[] BrPopLPush(string key, string newKey, int timeout)
         {
-            return _redisSocket.SendExpectedArray("BrPopLPush", key, newKey, timeout.ToString());
+            var prefixKey = GetPrefixKey(key);
+            var prefixNewKey = GetPrefixKey(newKey);
+            return _redisSocket.SendExpectedArray("BrPopLPush", prefixKey, prefixNewKey, timeout.ToString());
         }
 
         public int LRem(string key, string value, int count = 0)
         {
-            return _redisSocket.SendExpectedInteger("LRem", key, count.ToString(), value);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("LRem", prefixKey, count.ToString(), value);
         }
 
         public int LLen(string key)
         {
-            return _redisSocket.SendExpectedInteger("LLen", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("LLen", prefixKey);
         }
 
         public string LTrim(string key, int start = 0, int end = -1)
         {
-            return _redisSocket.SendExpectedString("LTrim", key, start.ToString(), end.ToString());
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("LTrim", prefixKey, start.ToString(), end.ToString());
         }
 
         public string LPop(string key)
         {
-            return _redisSocket.SendExpectedString("LPop", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("LPop", prefixKey);
         }
 
         public int LPushX(string key, params string[] values)
         {
             string[] args = new string[values.Length + 1];
-            args[0] = key;
+            var prefixKey = GetPrefixKey(key);
+            args[0] = prefixKey;
             int index = 1;
             foreach (var value in values)
             {
@@ -435,7 +493,8 @@ namespace Aescr.Redis
         public int LInsert(string key, string value, string existValue, bool before = true)
         {
             string[] args = new string[4];
-            args[0] = key;
+            var prefixKey = GetPrefixKey(key);
+            args[0] = prefixKey;
             args[1] = before ? "BEFORE" : "AFTER ";
             args[2] = existValue;
             args[3] = value;
@@ -444,18 +503,21 @@ namespace Aescr.Redis
 
         public string RPop(string key)
         {
-            return _redisSocket.SendExpectedString("RPop", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("RPop", prefixKey);
         }
 
         public string LSet(string key, string value, int index)
         {
-            return _redisSocket.SendExpectedString("LSet", key, index.ToString(), value);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("LSet", prefixKey, index.ToString(), value);
         }
 
         public int LPush(string key, params string[] values)
         {
             string[] args = new string[values.Length + 1];
-            args[0] = key;
+            var prefixKey = GetPrefixKey(key);
+            args[0] = prefixKey;
             int index = 1;
             foreach (var value in values)
             {
@@ -468,7 +530,8 @@ namespace Aescr.Redis
         public int RPushX(string key, params string[] values)
         {
             string[] args = new string[values.Length + 1];
-            args[0] = key;
+            var prefixKey = GetPrefixKey(key);
+            args[0] = prefixKey;
             int index = 1;
             foreach (var value in values)
             {
@@ -481,7 +544,8 @@ namespace Aescr.Redis
         public string HmSet(string key, Dictionary<string, string> kV)
         {
             string[] args = new string[kV.Count * 2 + 1];
-            args[0] = key;
+            var prefixKey = GetPrefixKey(key);
+            args[0] = prefixKey;
             int index = 1;
             foreach (var k in kV.Keys)
             {
@@ -496,7 +560,8 @@ namespace Aescr.Redis
         public string[] HmGet(string key, params string[] fields)
         {
             string[] args = new string[fields.Length + 1];
-            args[0] = key;
+            var prefixKey = GetPrefixKey(key);
+            args[0] = prefixKey;
             int index = 1;
             foreach (var field in fields)
             {
@@ -508,38 +573,45 @@ namespace Aescr.Redis
 
         public int HSet(string key, string field, string value)
         {
-            return _redisSocket.SendExpectedInteger("HSet", key, field, value);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("HSet", prefixKey, field, value);
         }
 
         public string[] HGetAll(string key)
         {
-            return _redisSocket.SendExpectedArray("HGetAll", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedArray("HGetAll", prefixKey);
         }
 
         public string HGet(string key, string field)
         {
-            return _redisSocket.SendExpectedString("HSet", key, field);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("HSet", prefixKey, field);
         }
 
         public int HExists(string key, string field)
         {
-            return _redisSocket.SendExpectedInteger("HExists", key, field);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("HExists", prefixKey, field);
         }
 
         public string HinCrBy(string key, string field, int number)
         {
-            return _redisSocket.SendExpectedString("HinCrBy", key, field, number.ToString());
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("HinCrBy", prefixKey, field, number.ToString());
         }
 
         public int HLen(string key)
         {
-            return _redisSocket.SendExpectedInteger("HLen", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("HLen", prefixKey);
         }
 
         public int HDel(string key, params string[] fields)
         {
+            var prefixKey = GetPrefixKey(key);
             string[] args = new string[fields.Length + 1];
-            args[0] = key;
+            args[0] = prefixKey;
             int index = 1;
             foreach (var field in fields)
             {
@@ -551,58 +623,69 @@ namespace Aescr.Redis
 
         public string[] HVals(string key)
         {
-            return _redisSocket.SendExpectedArray("HVals", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedArray("HVals", prefixKey);
         }
 
         public string HinCrByFloat(string key, string field, float fraction)
         {
-            return _redisSocket.SendExpectedString("HinCrByFloat", key, field, fraction.ToString(CultureInfo.InvariantCulture));
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("HinCrByFloat", prefixKey, field, fraction.ToString(CultureInfo.InvariantCulture));
         }
 
         public string[] HKeys(string key)
         {
-            return _redisSocket.SendExpectedArray("HKeys", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedArray("HKeys", prefixKey);
         }
 
         public int HSetNx(string key, string field, string value)
         {
-            return _redisSocket.SendExpectedInteger("HKeys", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("HKeys", prefixKey);
         }
 
         public string[] SUnion(params string[] keys)
         {
-            return _redisSocket.SendExpectedArray("SUnion", keys);
+            var prefixKey = GetPrefixKey(keys);
+            return _redisSocket.SendExpectedArray("SUnion", prefixKey);
         }
 
         public int SCard(string key)
         {
-            return _redisSocket.SendExpectedInteger("SCard", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedInteger("SCard", prefixKey);
         }
 
         public string[] SRandMember(string key, int count)
         {
-            return _redisSocket.SendExpectedArray("SRandMember", key, count.ToString());
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedArray("SRandMember", prefixKey, count.ToString());
         }
 
         public string SRandMember(string key)
         {
-            return _redisSocket.SendExpectedString("SRandMember", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedString("SRandMember", prefixKey);
         }
 
         public string[] SMembers(string key)
         {
-            return _redisSocket.SendExpectedArray("SMembers", key);
+            var prefixKey = GetPrefixKey(key);
+            return _redisSocket.SendExpectedArray("SMembers", prefixKey);
         }
 
         public string[] SInter(params string[] keys)
         {
-            return _redisSocket.SendExpectedArray("SInter", keys);
+            var prefixKey = GetPrefixKey(keys);
+            return _redisSocket.SendExpectedArray("SInter", prefixKey);
         }
 
         public int SRem(string key, params string[] member)
         {
             string[] args = new string[member.Length + 1];
-            args[0] = key;
+            var prefixKey = GetPrefixKey(key);
+            args[0] = prefixKey;
             int index = 1;
             foreach (var field in member)
             {
@@ -619,8 +702,9 @@ namespace Aescr.Redis
 
         public int SAdd(string key, params string[] values)
         {
+            var prefixKey = GetPrefixKey(key);
             string[] args = new string[values.Length + 1];
-            args[0] = key;
+            args[0] = prefixKey;
             int index = 1;
             foreach (var field in values)
             {
@@ -632,11 +716,13 @@ namespace Aescr.Redis
 
         public int SIsMember(string key, string value)
         {
+            key = GetPrefixKey(key);
             return _redisSocket.SendExpectedInteger("SAdd", key, value);
         }
 
         public int SDiffStore(string destination, params string[] keys)
         {
+            keys = GetPrefixKey(keys);
             string[] args = new string[keys.Length + 1];
             args[0] = destination;
             int index = 1;
@@ -650,11 +736,13 @@ namespace Aescr.Redis
 
         public string[] SDiff(params string[] keys)
         {
+            keys = GetPrefixKey(keys);
             return _redisSocket.SendExpectedArray("SDiff", keys);
         }
 
         public string[] SScan(string key, int cursor, string pattern, int count = 10)
         {
+            key = GetPrefixKey(key);
             string[] args = new string[4];
             args[0] = key;
             args[1] = cursor.ToString();
@@ -665,6 +753,7 @@ namespace Aescr.Redis
 
         public string[] SInterStore(string destination, params string[] keys)
         {
+            keys = GetPrefixKey(keys);
             string[] args = new string[keys.Length + 1];
             args[0] = destination;
             int index = 1;
@@ -678,6 +767,7 @@ namespace Aescr.Redis
 
         public int SUnionStore(string destination, params string[] keys)
         {
+            keys = GetPrefixKey(keys);
             string[] args = new string[keys.Length + 1];
             args[0] = destination;
             int index = 1;
@@ -691,31 +781,37 @@ namespace Aescr.Redis
 
         public string SPop(string key)
         {
+            key = GetPrefixKey(key);
             return _redisSocket.SendExpectedString("SPop", key);
         }
 
         public string ZRevRank(string key, string member)
         {
+            key = GetPrefixKey(key);
             return _redisSocket.SendExpectedString("ZRevRank", key, member);
         }
 
         public int ZLexCount(string key, string min, string max)
         {
+            key = GetPrefixKey(key);
             return _redisSocket.SendExpectedInteger("ZLexCount", key, min, max);
         }
 
         public int ZRemRangeByRank(string key, int start, int stop)
         {
+            key = GetPrefixKey(key);
             return _redisSocket.SendExpectedInteger("ZREMRANGEBYRANK", key, start.ToString(), stop.ToString());
         }
 
         public int ZCard(string key)
         {
+            key = GetPrefixKey(key);
             return _redisSocket.SendExpectedInteger("ZCard", key);
         }
 
         public int ZRem(string key, params string[] member)
         {
+            key = GetPrefixKey(key);
             string[] args = new string[member.Length + 1];
             args[0] = key;
             int index = 1;
@@ -729,11 +825,13 @@ namespace Aescr.Redis
 
         public int ZRank(string key, string member)
         {
+            key = GetPrefixKey(key);
             return _redisSocket.SendExpectedInteger("ZRank", key, member);
         }
 
         public string ZIncrBy(string key, int increment, string member)
         {
+            key = GetPrefixKey(key);
             return _redisSocket.SendExpectedString("ZRank", key, increment.ToString(), member);
         }
 
@@ -784,6 +882,7 @@ namespace Aescr.Redis
 
         public string DebugObject(string key)
         {
+            key = GetPrefixKey(key);
             return _redisSocket.SendExpectedString("DEBUG OBJECT", key);
         }
 
@@ -1050,6 +1149,7 @@ namespace Aescr.Redis
 
         public bool PfAdd(string key, params string[] element)
         {
+            key = GetPrefixKey(key);
             string[] p = new string[element.Length + 1];
             p[0] = key;
             for (int i = 0; i < element.Length; i++)
@@ -1061,6 +1161,7 @@ namespace Aescr.Redis
 
         public int PfCount(params string[] keys)
         {
+            keys = GetPrefixKey(keys);
             return _redisSocket.SendExpectedInteger("PFCOUNT", keys);
         }
         public RedisResult Unsubscribe(params string[] channel)
@@ -1094,16 +1195,19 @@ namespace Aescr.Redis
 
         public string[] GeoHash(params string[] keys)
         {
+            keys = GetPrefixKey(keys);
             return _redisSocket.SendExpectedArray("GeoHash", keys);
         }
 
         public string[] GeoPos(params string[] keys)
         {
+            keys = GetPrefixKey(keys);
             return _redisSocket.SendExpectedArray("GeoPos", keys);
         }
 
         public string GeoDist(string[] keys, string unit = "km")
         {
+            keys = GetPrefixKey(keys);
             throw new NotImplementedException();
         }
 
@@ -1115,18 +1219,21 @@ namespace Aescr.Redis
 
         public string GeoAdd(string key, string member, decimal longitude, decimal latitude)
         {
+            key = GetPrefixKey(key);
             throw new NotImplementedException();
         }
 
         public string GeoRadiusByMember(string key, string member, long radius, string unit = "km", bool withCooRd = false,
             bool withDist = false, bool withHash = false, int count = -1, int sort = -1)
         {
+            key = GetPrefixKey(key);
             throw new NotImplementedException();
         }
 
         public bool Migrate(string[] key, string host, int port = 6379, string password = "", int db = 0, int timeout = 5000, bool copy = false,
             bool replace = true)
         {
+            key = GetPrefixKey(key);
             var param = new List<string>
             {
                 host,
