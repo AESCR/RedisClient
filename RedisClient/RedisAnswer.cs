@@ -23,6 +23,7 @@
 #endregion
 
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -37,6 +38,21 @@ namespace Aescr.Redis
         public string[] Args { get; set; }
     }
 
+    public enum RedisKeyType
+    {
+        [Description("key不存在")]
+        None,
+        [Description("字符串")]
+        String,
+        [Description("列表")]
+        List,
+        [Description("集合")]
+        Set,
+        [Description("有序集")]
+        ZSet,
+        [Description("哈希表")]
+        Hash
+    }
     public class RedisResult
     {
         public RedisResult(char type)

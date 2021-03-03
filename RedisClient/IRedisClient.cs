@@ -7,6 +7,11 @@ namespace Aescr.Redis
     {
         #region 自定义命令
         /// <summary>
+        /// 设置Key前缀
+        /// </summary>
+        /// <param name="prefix"></param>
+        void SetPrefix(string prefix);
+        /// <summary>
         /// 获取从服务器
         /// </summary>
         /// <returns></returns>
@@ -31,6 +36,11 @@ namespace Aescr.Redis
         /// <returns>返回Key</returns>
         string Add(string value, TimeSpan expiresIn);
         /// <summary>
+        /// 添加redis字符串
+        /// </summary>
+        /// <param name="value">值</param>
+        string Add(string value);
+        /// <summary>
         /// 设置Redis密码
         /// </summary>
         /// <param name="newPassword"></param>
@@ -53,7 +63,13 @@ namespace Aescr.Redis
         /// <param name="milliseconds">毫秒计</param>
         /// <returns>设置成功返回 1 。 当 key 不存在或者不能为 key 设置过期时间时(比如在低于 2.1.3 版本的 Redis 中你尝试更新 key 的过期时间)返回 0 。</returns>
         int PExpire(string key, long milliseconds);
-
+        /// <summary>
+        /// 设置 key 的过期时间亿以毫秒计。
+        /// </summary>
+        /// <param name="key">键</param>
+        /// <param name="timeSpan">时间</param>
+        /// <returns>设置成功返回 1 。 当 key 不存在或者不能为 key 设置过期时间时(比如在低于 2.1.3 版本的 Redis 中你尝试更新 key 的过期时间)返回 0 。</returns>
+        int PExpire(string key, TimeSpan timeSpan);
         /// <summary>
         /// 设置 key 过期时间的时间戳(unix timestamp) 以毫秒计
         /// </summary>
@@ -61,7 +77,6 @@ namespace Aescr.Redis
         /// <param name="timestamp">UNIX 时间戳</param>
         /// <returns>设置成功返回 1 。 当 key 不存在或者不能为 key 设置过期时间时(比如在低于 2.1.3 版本的 Redis 中你尝试更新 key 的过期时间)返回 0 。</returns>
         int PExpireAt(string key, long timestamp);
-
         /// <summary>
         /// 修改 key 的名称
         /// </summary>
@@ -125,7 +140,7 @@ namespace Aescr.Redis
         /// </summary>
         /// <param name="key">键</param>
         /// <returns>当 key 不存在时，返回 -2 。 当 key 存在但没有设置剩余生存时间时，返回 -1 。 否则，以毫秒为单位，返回 key 的剩余生存时间。</returns>
-        int PTtl(string key);
+        long PTtl(string key);
 
         /// <summary>
         /// 用于在新的 key 不存在时修改 key 的名称 。
@@ -1032,14 +1047,14 @@ namespace Aescr.Redis
         /// 以一种易于理解和阅读的格式，返回关于 Redis 服务器的各种信息和统计数值。
         /// </summary>
         /// <returns>字符串，文本行的集合。</returns>
-        string[] Info();
+        string Info();
 
         /// <summary>
         ///  以一种易于理解和阅读的格式，返回关于 Redis 服务器的各种信息和统计数值。
         /// </summary>
         /// <param name="section">给定可选的参数 section ，可以让命令只返回某一部分的信息：</param>
         /// <returns>字符串，文本行的集合。</returns>
-        string[] Info(string section);
+        string Info(string section);
 
         /// <summary>
         /// 对启动 Redis 服务器时所指定的 redis.conf 配置文件进行改写

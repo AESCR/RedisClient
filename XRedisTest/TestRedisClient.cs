@@ -33,6 +33,11 @@ namespace XRedisTest
     public class TestRedisClient
     {
         private readonly RedisClient redis = new RedisClient();
+        [TestInitialize]
+        public void TestInit()
+        {
+            redis.SetPrefix("AESCR");
+        }
         [TestMethod]
         public void TestConnect()
         {
@@ -124,10 +129,29 @@ namespace XRedisTest
             Assert.AreEqual(ping, true);
         }
         [TestMethod]
-        public void TestPing2()
+        public void TestInfo()
         {
-        
+            var info= redis.Info();
+            var s= redis.Info("Server");
         }
 
+        #region  Redis 键(key) 命令
+
+        [TestMethod]
+        public void TestType()
+        {
+            redis.Add("RandomKey", TimeSpan.FromSeconds(10));
+            var key = redis.RandomKey();
+            var s = redis.Type(key);
+        }
+        [TestMethod]
+        public void TestPExpire()
+        {
+            var x= redis.Add("RandomKey");
+            var key = redis.RandomKey();
+            redis.PExpire(key, TimeSpan.FromSeconds(10));
+            var xx= redis.PTtl(key);
+        }
+        #endregion
     }
 }

@@ -29,7 +29,6 @@ namespace Aescr.Redis
         private readonly object _lockObject = new object();
         public event EventHandler<EventArgs> Connected;
         private readonly RedisConnection _connection;
-        public string Prefix => _connection.Prefix;
         public RedisConnection RedisConnection => _connection;
         public RedisSocket(string connection)
         {
@@ -198,7 +197,15 @@ namespace Aescr.Redis
             var resp = SendCommand(cmd, args);
             return Convert.ToInt32(resp.Value);
         }
-
+        /// <summary>
+        /// 响应结果预期整数64
+        /// </summary>
+        /// <returns></returns>
+        public long SendExpectedInteger64(string cmd, params string[] args)
+        {
+            var resp = SendCommand(cmd, args);
+            return Convert.ToInt64(resp.Value);
+        }
         /// <summary>
         /// 响应结果预期整数
         /// </summary>

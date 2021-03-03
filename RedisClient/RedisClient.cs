@@ -106,11 +106,19 @@ namespace Aescr.Redis
             return _redisSocket.SendCommand(cmd, args);
         }
 
+        public void SetPrefix(string prefix)
+        {
+            _redisSocket.RedisConnection.Prefix = prefix;
+        }
         private string GetPrefixKey(string key)
         {
             if (string.IsNullOrWhiteSpace(Prefix) ==false)
             {
-                return _redisSocket.RedisConnection.Prefix + key;
+                if (key.IndexOf(Prefix, StringComparison.Ordinal)==0)
+                {
+                    return key;
+                }
+                return _redisSocket.RedisConnection.Prefix+"_" + key;
             }
             return key;
         }
@@ -131,14 +139,20 @@ namespace Aescr.Redis
         {
             var id = Snowflake.GetId();
             var key=GetPrefixKey(id.ToString());
-            if (!SetNx(key.ToString(), value)) return string.Empty;
+            if (!SetNx(key.ToString(), value)) throw new Exception($"添加Add失败！Key:{key}");
             if (expiresIn != TimeSpan.Zero)
             {
                 Expire(key.ToString(), expiresIn.Seconds);
             }
             return key.ToString();
         }
-
+        public string Add(string value)
+        {
+            var id = Snowflake.GetId();
+            var key = GetPrefixKey(id.ToString());
+            if (!SetNx(key.ToString(), value)) throw new Exception($"添加Add失败！Key:{key}");
+            return key.ToString();
+        }
         public bool SetPassword(string newPassword)
         {
             return ConfigSet("requirepass", newPassword);
@@ -164,6 +178,11 @@ namespace Aescr.Redis
             return _redisSocket.SendExpectedInteger("PExpire", prefixKey, milliseconds.ToString());
         }
 
+        public int PExpire(string key, TimeSpan timeSpan)
+        {
+            var milliseconds = (long)timeSpan.TotalMilliseconds;
+            return PExpire(key, milliseconds);
+        }
         public int PExpireAt(string key, long timestamp)
         {
             var prefixKey = GetPrefixKey(key);
@@ -218,10 +237,10 @@ namespace Aescr.Redis
             return _redisSocket.SendExpectedInteger("Del", prefixKey);
         }
 
-        public int PTtl(string key)
+        public long PTtl(string key)
         {
             var prefixKey = GetPrefixKey(key);
-            return _redisSocket.SendExpectedInteger("PTtl", prefixKey);
+            return _redisSocket.SendExpectedInteger64("PTtl", prefixKey);
         }
 
         public int RenameNx(string key, string newKey)
@@ -1051,14 +1070,14 @@ namespace Aescr.Redis
             return _redisSocket.SendExpectedArray("TIME");
         }
 
-        public string[] Info()
+        public string Info()
         {
-            return _redisSocket.SendExpectedArray("INFO");
+            return _redisSocket.SendExpectedString("INFO");
         }
 
-        public string[] Info(string section)
+        public string Info(string section)
         {
-            return _redisSocket.SendExpectedArray("INFO", section);
+            return _redisSocket.SendExpectedString("INFO", section);
         }
 
         public string ConfigRewrite()
