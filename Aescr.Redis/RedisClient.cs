@@ -37,6 +37,7 @@ namespace Aescr.Redis
                 RedisConnection cRole = connectionStr[0];
                 _connections[0].Role = "master";
                 cRole.Role = _connections[0].Role;
+                masters.Add(cRole);
                 _redisSocket =new RedisSocket(cRole);
             }else if (masters.Count==1)
             {
@@ -95,9 +96,9 @@ namespace Aescr.Redis
             var wr = _weightedRound.GetServer() as RedisConnection;
             return _redisSocketFactory.GetRedisSocket(wr);
         }
-        public void AutoMasterSlave(bool local = false)
+        public void AutoMasterSlave()
         {
-            var master = _connections.Find(x => x.Role == "master");
+            var master = _connections.Find(x => x.Role?.ToLower() == "master");
             if (master == null)
             {
                 throw new Exception("未发现主库");
@@ -107,11 +108,31 @@ namespace Aescr.Redis
             {
                 var redisClient = _redisClientFactory.GetRedisClient(connection);
                 redisClient.SlaveOf();
-                redisClient.SlaveOf(master.Host, master.Password);
-                if (local)
+                if (connection.Role?.ToLower() != "master")
                 {
-                    redisClient.ConfigRewrite();
+                    redisClient.SlaveOf(master.Host, master.Password);
                 }
+                redisClient.ConfigRewrite();
+            });
+        }
+
+        public void AutoMasterSlave(string host,string password="")
+        {
+            var master = _connections.Find(x => x.Role?.ToLower() == "master");
+            if (master == null)
+            {
+                throw new Exception("未发现主库");
+            }
+            var par = _connections.AsParallel();
+            par.ForAll(connection =>
+            {
+                var redisClient = _redisClientFactory.GetRedisClient(connection);
+                redisClient.SlaveOf();
+                if (connection.Role?.ToLower() != "master")
+                {
+                    redisClient.SlaveOf(host, password);
+                }
+                redisClient.ConfigRewrite();
             });
         }
         public RedisClient():this("127.0.0.1",6379,"")

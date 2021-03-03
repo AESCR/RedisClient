@@ -41,16 +41,21 @@ namespace XRedisTest
         [TestMethod]
         public void TestAutoMasterSlave()
         {
-            redis.AutoMasterSlave();
+            redis.AutoMasterSlave("172.17.0.2:6379","");
         }
         [TestMethod]
         public void TestReadClient()
         {
             for (int i = 0; i < redis.Count*2; i++)
             {
-                var x = redis.GetReadOnlyRedis();
+                if (true)
+                {
+                    
+                }
+                var x = redis.GetRedisClient();
                 var xx=  x.Host;
                 x.Connect();
+                x.Quit();
             }
         }
         [TestMethod]

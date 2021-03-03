@@ -9,8 +9,7 @@ namespace Aescr.Redis
         /// <summary>
         /// 自动配置主从关系
         /// </summary>
-        /// <param name="local">是否将配置写入本地配置文件</param>
-        void AutoMasterSlave(bool local = false);
+        void AutoMasterSlave();
         /// <summary>
         /// 设置Key前缀
         /// </summary>

@@ -58,8 +58,9 @@ namespace Aescr.Redis
         /// Redis服务器进行连接
         /// </summary>
         /// <returns>连接状态</returns>
-        public bool Connect()
+        public bool Connect(bool throwError=true)
         {
+            _exit = false;
             if (IsConnected)
             {
                 return IsConnected;
@@ -70,12 +71,20 @@ namespace Aescr.Redis
                 try
                 {
                     InitSocket();
+                    if (IsConnected)
+                    {
+                        return IsConnected;
+                    }
                     _socket.Connect(hostPort.Key, hostPort.Value);
                     _bstream = new BufferedStream(new NetworkStream(_socket), 16 * 1024);
                     OnConnected();
                 }
                 catch
                 {
+                    if (throwError)
+                    {
+                        throw;
+                    }
                     return false;
                 }
             }
@@ -138,6 +147,10 @@ namespace Aescr.Redis
         }
         public RedisResult SendCommand(string cmd, params string[] args)
         {
+            if (_exit == false)
+            {
+                Connect();
+            }
             string resp = "*" + (1 + args.Length) + Crlf;
             resp += "$" + cmd.Length + Crlf + cmd + Crlf;
             foreach (string arg in args)
@@ -147,10 +160,6 @@ namespace Aescr.Redis
                 resp += "$" + argStrLength + Crlf + argStr + Crlf;
             }
             byte[] r = Encoding.GetBytes(resp);
-            if (_exit == false)
-            {
-                Connect();
-            }
             lock (_lockObject)
             {
                 try
@@ -281,7 +290,6 @@ namespace Aescr.Redis
                     redisAnswer.Value = JsonSerializer.Serialize(redisAnswers.Select(x => x.Value), jsonSerializerOptions);
                     redisAnswer.NestedValue = redisAnswers;
                     break;
-
                 default:
                     throw new Exception("未知类型匹配！");
             }
@@ -363,11 +371,6 @@ namespace Aescr.Redis
 
         public bool Select(int index)
         {
-            if (IsConnected==false)
-            {
-                _connection.Database = index;
-                return true;
-            }
             var result = SendExpectedOk("Select", index.ToString());
             if (result)
             {
