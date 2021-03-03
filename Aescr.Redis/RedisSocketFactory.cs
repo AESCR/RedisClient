@@ -2,16 +2,28 @@ using System.Collections;
 
 namespace Aescr.Redis
 {
-    public static class RedisSocketFactory
+    public  class RedisSocketFactory
     {
-        private static readonly Hashtable Hashtable;
+        private  readonly Hashtable Hashtable;
 
-        static RedisSocketFactory()
+        private  RedisSocketFactory()
         {
-            Hashtable = new Hashtable();
+            Hashtable = Hashtable.Synchronized(new Hashtable());
         }
-
-        public static RedisSocket GetRedisSocket(string host,string password="")
+        public static RedisSocketFactory CreateRedisSocketFactory()
+        {
+            return new RedisSocketFactory();
+        }
+        public  RedisSocket GetRedisSocket(RedisConnection connection)
+        {
+            if (Hashtable.ContainsKey(connection.Host))
+            {
+                return new RedisSocket(connection);
+            }
+            Hashtable.Add(connection.Host, new RedisSocket(connection));
+            return Hashtable[connection.Host] as RedisSocket;
+        }
+        public  RedisSocket GetRedisSocket(string host,string password="")
         {
             var (key, value) = RedisSocket.SplitHost(host);
             if (Hashtable.ContainsKey(host))

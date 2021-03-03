@@ -7,15 +7,15 @@ namespace Aescr.Redis
     {
         #region 自定义命令
         /// <summary>
+        /// 自动配置主从关系
+        /// </summary>
+        /// <param name="local">是否将配置写入本地配置文件</param>
+        void AutoMasterSlave(bool local = false);
+        /// <summary>
         /// 设置Key前缀
         /// </summary>
         /// <param name="prefix"></param>
         void SetPrefix(string prefix);
-        /// <summary>
-        /// 获取从服务器
-        /// </summary>
-        /// <returns></returns>
-        RedisClient GetReadOnlyRedis();
         /// <summary>
         /// 通过雪花算法获取唯一Id
         /// </summary>
@@ -911,12 +911,20 @@ namespace Aescr.Redis
         /// 可以将当前服务器转变为指定服务器的从属服务器(slave server)
         /// 如果当前服务器已经是某个主服务器(master server)的从属服务器，那么执行 SLAVEOF host port 将使当前服务器停止对旧主服务器的同步，丢弃旧数据集，转而开始对新主服务器进行同步。
         /// </summary>
+        /// <param name="ip"></param>
+        /// <param name="port"></param>
+        /// <param name="password"></param>
+        /// <returns>总是返回 OK 。</returns>
+        bool SlaveOf(string ip, int port, string password = "");
+        /// <summary>
+        /// 可以将当前服务器转变为指定服务器的从属服务器(slave server)
+        /// 如果当前服务器已经是某个主服务器(master server)的从属服务器，那么执行 SLAVEOF host port 将使当前服务器停止对旧主服务器的同步，丢弃旧数据集，转而开始对新主服务器进行同步。
+        /// </summary>
         /// <param name="host"></param>
         /// <param name="port"></param>
         /// <param name="password"></param>
         /// <returns>总是返回 OK 。</returns>
-        bool SlaveOf(string host, int port, string password = "");
-
+        bool SlaveOf(string host, string password = "");
         /// <summary>
         /// 一个从属服务器执行命令 SLAVEOF NO ONE 将使得这个从属服务器关闭复制功能，并从从属服务器转变回主服务器，原来同步所得的数据集不会被丢弃。
         /// </summary>

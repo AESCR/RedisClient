@@ -363,12 +363,16 @@ namespace Aescr.Redis
 
         public bool Select(int index)
         {
+            if (IsConnected==false)
+            {
+                _connection.Database = index;
+                return true;
+            }
             var result = SendExpectedOk("Select", index.ToString());
             if (result)
             {
                 _connection.Database = index;
             }
-
             return result;
         }
         protected virtual void OnConnected()

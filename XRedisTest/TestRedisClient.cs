@@ -32,11 +32,26 @@ namespace XRedisTest
     [TestClass]
     public class TestRedisClient
     {
-        private readonly RedisClient redis = new RedisClient();
+        private readonly RedisClient redis = new RedisClient("127.0.0.1:6379,defaultDatabase=1", "127.0.0.1:6380", "127.0.0.1:6381", "127.0.0.1:6382", "127.0.0.1:6383", "127.0.0.1:6384", "127.0.0.1:6385", "127.0.0.1:6386");
         [TestInitialize]
         public void TestInit()
         {
             redis.SetPrefix("AESCR");
+        }
+        [TestMethod]
+        public void TestAutoMasterSlave()
+        {
+            redis.AutoMasterSlave();
+        }
+        [TestMethod]
+        public void TestReadClient()
+        {
+            for (int i = 0; i < redis.Count*2; i++)
+            {
+                var x = redis.GetReadOnlyRedis();
+                var xx=  x.Host;
+                x.Connect();
+            }
         }
         [TestMethod]
         public void TestConnect()

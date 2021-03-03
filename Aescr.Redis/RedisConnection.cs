@@ -30,7 +30,7 @@ namespace Aescr.Redis
 {
     public class RedisConnection: WeightedRoundRobinServer
     {
-        public string Host { get; set; } = "127.0.0.1:6379";
+        public new string Host { get; set; } = "127.0.0.1:6379";
         public string Role { get; set; } 
         public bool Ssl { get; set; } = false;
         public string User { get; set; }

@@ -32,42 +32,28 @@ namespace Aescr.Redis
 {
     public  class RedisClientFactory
     {
-        private readonly Hashtable Hashtable;
+        private readonly Hashtable _hashtable;
 
         private RedisClientFactory()
         {
-            Hashtable = new Hashtable();
+            _hashtable = Hashtable.Synchronized(new Hashtable());
         }
 
         public static RedisClientFactory CreateClientFactory()
         {
             return new RedisClientFactory();
         }
-        public  RedisClient GetRedisClient(string connectionStr)
+        public RedisClient GetRedisClient(RedisConnection connection)
         {
-            RedisConnection connection = connectionStr;
-            if (!Hashtable.ContainsKey(connection.Host))
+            if (!_hashtable.ContainsKey(connection.Host))
             {
                 RedisClient redisClient = new RedisClient(connection);
-                Hashtable.Add(connection.Host, redisClient);
+                _hashtable.Add(connection.Host, redisClient);
                 return redisClient;
             }
             else
             {
-                return Hashtable[connection.Host] as RedisClient;
-            }
-        }
-        public  RedisClient GetRedisClient(RedisConnection connection)
-        {
-            if (!Hashtable.ContainsKey(connection.Host))
-            {
-                RedisClient redisClient = new RedisClient(connection);
-                Hashtable.Add(connection.Host, redisClient);
-                return redisClient;
-            }
-            else
-            {
-                return Hashtable[connection.Host] as RedisClient;
+                return _hashtable[connection.Host] as RedisClient;
             }
         }
     }

@@ -10,7 +10,7 @@ namespace Aescr.Redis
     public class WeightedRoundRobinServer
     {
         public string Host;
-        public int Weight;
+        public int Weight=1;
     }
     /// <summary>
     /// 权重轮询算法
