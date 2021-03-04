@@ -144,12 +144,6 @@ namespace Aescr.Redis
             var connection = new RedisConnection {Host = $"{ip}:{port}", Password = password};
             InitClient(connection);
         }
-        public RedisClient(string host, string password)
-        {
-            var connection = new RedisConnection {Host = host, Password = password};
-            InitClient(connection);
-        }
-
         public bool Connect()
         {
             return _redisSocket.Connect();
