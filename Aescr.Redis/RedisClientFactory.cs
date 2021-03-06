@@ -32,6 +32,8 @@ namespace Aescr.Redis
 {
     public  class RedisClientFactory
     {
+        private static RedisClientFactory _allGlobal=new RedisClientFactory();
+
         private readonly Hashtable _hashtable;
 
         private RedisClientFactory()
@@ -42,6 +44,10 @@ namespace Aescr.Redis
         public static RedisClientFactory CreateClientFactory()
         {
             return new RedisClientFactory();
+        }
+        public static RedisClient GetGlobalRedisClient(RedisConnection connection)
+        {
+            return _allGlobal.GetRedisClient(connection);
         }
         public RedisClient GetRedisClient(RedisConnection connection)
         {

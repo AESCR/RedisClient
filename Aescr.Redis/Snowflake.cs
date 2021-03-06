@@ -37,10 +37,15 @@ namespace Aescr.Redis
                 snowflake = new Snowflake();
             return snowflake;
         }
-
+        private static long generateIntID()
+        {
+            byte[] buffer = Guid.NewGuid().ToByteArray();
+            return BitConverter.ToInt64(buffer, 0);
+        }
         public Snowflake()
         {
-            Snowflakes(0L, -1);
+            //Snowflakes(0L, -1);
+            Snowflakes(generateIntID(), -1);
         }
 
         public Snowflake(long machineId)
