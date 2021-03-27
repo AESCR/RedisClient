@@ -7,8 +7,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestRedis", "XRedisTest\Tes
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Aescr.Redis", "Aescr.Redis\Aescr.Redis.csproj", "{B3D324C4-7263-476E-9F2A-87D3386102AA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestBenchmarkDotNet", "TestBenchmarkDotNet\TestBenchmarkDotNet.csproj", "{078E241B-58C5-40BF-B923-A0FD03CA4019}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,10 +21,6 @@ Global
 		{B3D324C4-7263-476E-9F2A-87D3386102AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B3D324C4-7263-476E-9F2A-87D3386102AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B3D324C4-7263-476E-9F2A-87D3386102AA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{078E241B-58C5-40BF-B923-A0FD03CA4019}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{078E241B-58C5-40BF-B923-A0FD03CA4019}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{078E241B-58C5-40BF-B923-A0FD03CA4019}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{078E241B-58C5-40BF-B923-A0FD03CA4019}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
