@@ -24,6 +24,7 @@ namespace Aescr.Redis
         public Encoding Encoding { get; private set; }
         private readonly object _lockSocket = new object();
         public event EventHandler Connected;
+        public event EventHandler<RedisMessage> Recieved;
         public RedisSocket(string host, bool ssl = false, Encoding encoding = null)
         {
             Encoding = encoding ?? Encoding.UTF8;
@@ -32,10 +33,6 @@ namespace Aescr.Redis
             Ip = hostPort.Key;
             Port= hostPort.Value;
         }
-        /// <summary>
-        /// Redis服务器进行连接
-        /// </summary>
-        /// <returns>连接状态</returns>
         public bool Connect()
         {
             if (IsConnected) return IsConnected;
@@ -97,21 +94,6 @@ namespace Aescr.Redis
 
             return new KeyValuePair<string, int>(host, 6379);
         }
-        public string[] SendCommands(params string[] cmds)
-        {
-            lock (_lockSocket)
-            {
-                if (SendCommand("Multi").ToLower()=="ok")
-                {
-                    foreach (var cmd in cmds)
-                    {
-                        SendCommand(cmd);
-                    }
-                    var resp= SendCommand("Exec");
-                }
-            }
-            return Array.Empty<string>();
-        }
         public string SendCommand(string cmd)
         {
             var cSplit= cmd.Split(' ');
@@ -130,13 +112,16 @@ namespace Aescr.Redis
         }
         public string SendCommand(string[] args)
         {
+            string cmd=String.Empty;
             string resp = "*" + args.Length + Crlf;
             foreach (string arg in args)
             {
                 string argStr = arg.Trim();
                 int argStrLength = Encoding.GetByteCount(argStr);
                 resp += "$" + argStrLength + Crlf + argStr + Crlf;
+                cmd += " "+argStr;
             }
+            cmd = cmd.Trim();
             byte[] r = Encoding.GetBytes(resp);
             lock (_lockSocket)
             {
@@ -147,46 +132,68 @@ namespace Aescr.Redis
                 }
                 catch(Exception ex)
                 {
-                    throw new Exception("发送redis 命令失败！", ex);
+                    throw new Exception($"发送redis命令:{cmd}失败！", ex);
                 }
-                return Parse();
+
+                var rawBuilder = new StringBuilder();
+                var result= Parse(ref rawBuilder);
+                var rm = new RedisMessage {SendCommand = cmd, ReceiveMessage = result, RawCommand = resp,RawMessage = rawBuilder.ToString()};
+                Recieved?.Invoke(this, rm);
+                return result;
             }
         }
       
-        public string Parse()
+        public string Parse(ref StringBuilder rawBuilder)
         {
+            string resp;
             var c = (char)_bstream.ReadByte();
+            rawBuilder.Append(c);
             switch (c)
             {
                 case '+':
-                    return ReadLine();
+                    resp = ReadLine();
+                    rawBuilder.AppendLine(resp);
+                    break;
                 case ':':
-                    return ReadLine();
+                    resp = ReadLine();
+                    rawBuilder.AppendLine(resp);
+                    break;
                 case '-':
-                    return ReadLine();
+                    resp = ReadLine();
+                    rawBuilder.AppendLine(resp);
+                    break;
                 case '$':
                     var lenStr = ReadLine();
                     var len = Convert.ToInt32(lenStr);
+                    rawBuilder.AppendLine(len.ToString());
                     if (len==-1)
                     {
-                        return null;
+                        rawBuilder.Append("");
+                        resp= null;
+                        break;
                     }
                     byte[] bytes = new byte[len];
                     _bstream.Read(bytes, 0, bytes.Length);
                     SkipLine();
-                    return Encoding.GetString(bytes);
+                    resp= Encoding.GetString(bytes);
+                    rawBuilder.AppendLine(resp);
+                    break;
                 case '*':
                     var parameterlenStr = ReadLine();
                     var parameterLen = Convert.ToInt32(parameterlenStr);
+                    rawBuilder.AppendLine(parameterLen.ToString());
                     StringBuilder redisAnswers = new StringBuilder();
                     for (int i = 0; i < parameterLen; i++)
                     {
-                        redisAnswers.AppendLine(Parse());
+                        redisAnswers.AppendLine(Parse(ref rawBuilder));
                     }
-                    return redisAnswers.ToString();
+                    resp = redisAnswers.ToString();
+                    break;
                 default:
                     throw new Exception("未知类型匹配！");
             }
+
+            return resp;
         }
 
         private void SkipLine()

@@ -157,6 +157,31 @@ namespace XRedisTest
             redis.PExpire(key, TimeSpan.FromSeconds(10));
             var xx= redis.PTtl(key);
         }
+        [TestMethod]
+        public void TestSubscribe()
+        {
+            var x1 = redis.Ping();
+            var x12 = redis.Ping("AESCR");
+            var r= redis.Subscribe("mychannel");
+            var x2= redis.Ping();
+            var x22 = redis.Ping("AESCR");
+            var x= redis.Add("123");
+        }
+        [TestMethod]
+        public void TestRecieved()
+        {
+            redis.Recieved += Redis_Recieved;
+            var x1 = redis.Ping();
+            var x12 = redis.Ping("AESCR");
+            var r = redis.Subscribe("mychannel");
+            var x2 = redis.Ping();
+            var x22 = redis.Ping("AESCR");
+        }
+
+        private void Redis_Recieved(object sender, RedisMessage e)
+        {
+            
+        }
         #endregion
     }
 }

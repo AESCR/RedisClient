@@ -20,6 +20,11 @@ namespace Aescr.Redis
         private readonly RedisConnection _connection;
         private WeightedRoundRobin WeightedRound=> new(_slaveClients.Select(x=>new WeightedRoundRobinServer(){ Host = x._connection?.Host, Weight = x.Weight }));
         public int Weight { get; set; } = 1;
+        public event EventHandler<RedisMessage> Recieved
+        {
+            add => _redisSocket.Recieved += value;
+            remove => _redisSocket.Recieved -= value;
+        }
         public static RedisClient GetSingle(string connectionStr)
         {
             RedisConnection connection = connectionStr;
@@ -85,10 +90,6 @@ namespace Aescr.Redis
         }
 
         #region Send
-        /// <summary>
-        /// 响应结果预期OK
-        /// </summary>
-        /// <returns></returns>
         private bool SendExpectedOk(string cmd, params string[] args)
         {
             var resp = SendCommand(cmd,args);
@@ -108,7 +109,6 @@ namespace Aescr.Redis
             var resp = SendCommand(cmd, args);
             return Convert.ToInt64(resp);
         }
-
         public string SendCommand(string cmd)
         {
             return _redisSocket.SendCommand(cmd);
@@ -888,11 +888,20 @@ namespace Aescr.Redis
         }
         public bool Ping()
         {
-            return SendExpectedString("Ping") == "PONG";
+            var resp = SendExpectedString("Ping").ToUpper().Trim();
+            return resp == "PONG";
         }
         public string Ping(string text)
         {
-            return SendExpectedString("Ping", text);
+            var resp= SendExpectedString("Ping", text);
+            if (resp.Contains(text))
+            {
+                return text;
+            }
+            else
+            {
+                return String.Empty;
+            }
         }
         public bool Quit()
         {
