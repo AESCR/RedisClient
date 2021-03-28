@@ -32,9 +32,7 @@ namespace XRedisTest
     [TestClass]
     public class TestRedisClient
     {
-        private readonly RedisClient redis = new RedisClient("127.0.0.1:6379,defaultDatabase=1", "127.0.0.1:6380");
-
-        //, "127.0.0.1:6381", "127.0.0.1:6382", "127.0.0.1:6383", "127.0.0.1:6384", "127.0.0.1:6385", "127.0.0.1:6386"
+        private readonly RedisClient redis = new RedisClient("120.26.161.113:6379,defaultDatabase=1");
         [TestInitialize]
         public void TestInit()
         {
@@ -43,22 +41,7 @@ namespace XRedisTest
         [TestMethod]
         public void TestAutoMasterSlave()
         {
-            redis.AutoMasterSlave("172.17.0.2:6379", "");
-        }
-        [TestMethod]
-        public void TestReadClient()
-        {
-            for (int i = 0; i < redis.Count*2; i++)
-            {
-                if (true)
-                {
-                    
-                }
-                var x = redis.GetRedisClient();
-                var xx=  x.Host;
-                x.Connect();
-                x.Quit();
-            }
+            redis.AutoMasterSlave();
         }
         [TestMethod]
         public void TestConnect()

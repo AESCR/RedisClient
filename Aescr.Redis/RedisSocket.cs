@@ -14,81 +14,52 @@ namespace Aescr.Redis
 {
     public class RedisSocket : IDisposable
     {
-        /// <summary>
-        /// 断开连接
-        /// </summary>
-        private bool _exit = false;
-
         private const string Crlf = "\r\n";
         private Socket _socket;
         private BufferedStream _bstream;
         public bool IsConnected => _socket?.Connected ?? false;
-        public bool Ssl => _connection.Ssl;
-        public int Database => _connection.Database;
-        public Encoding Encoding => _connection.Encoding;
-        private readonly object _lockObject = new object();
-        public event EventHandler<EventArgs> Connected;
-        private readonly RedisConnection _connection;
-        public RedisConnection RedisConnection => _connection;
-        public RedisSocket(string connection)
+        public bool Ssl { get; private set; } = false;
+        public string Ip { get; private set; }
+        public int Port { get; private set; }
+        public Encoding Encoding { get; private set; }
+        private readonly object _lockSocket = new object();
+        public event EventHandler Connected;
+        public RedisSocket(string host, bool ssl = false, Encoding encoding = null)
         {
-            _connection = connection;
-            InitSocket();
-        }
-        public RedisSocket(string ip, int port, string password)
-        {
-            _connection = new RedisConnection {Host = $"{ip}:{port}", Password = password};
-            InitSocket();
-        }
-
-        public RedisSocket(string ip, int port) : this(ip, port, "")
-        {
-        }
-
-        private void InitSocket()
-        {
-            _socket ??= new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
-            {
-                NoDelay = true,
-                ReceiveTimeout = (int) _connection.ReceiveTimeout.TotalMilliseconds,
-                SendTimeout = (int) _connection.SendTimeout.TotalMilliseconds,
-            };
+            Encoding = encoding ?? Encoding.UTF8;
+            Ssl = ssl;
+            var hostPort = SplitHost(host);
+            Ip = hostPort.Key;
+            Port= hostPort.Value;
         }
         /// <summary>
         /// Redis服务器进行连接
         /// </summary>
         /// <returns>连接状态</returns>
-        public bool Connect(bool throwError=true)
+        public bool Connect()
         {
-            _exit = false;
-            if (IsConnected)
+            if (IsConnected) return IsConnected;
+            lock (_lockSocket)
             {
-                return IsConnected;
-            }
-            var hostPort = SplitHost(_connection.Host);
-            lock (_lockObject)
-            {
+                _socket ??= new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+                {
+                    NoDelay = true,
+                    ReceiveTimeout = (int)TimeSpan.FromSeconds(10).TotalMilliseconds,
+                    SendTimeout = (int)TimeSpan.FromSeconds(20).TotalMilliseconds,
+                };
+                if (IsConnected) return IsConnected;
                 try
                 {
-                    InitSocket();
-                    if (IsConnected)
-                    {
-                        return IsConnected;
-                    }
-                    _socket.Connect(hostPort.Key, hostPort.Value);
+                    _socket.Connect(Ip, Port);
                     _bstream = new BufferedStream(new NetworkStream(_socket), 16 * 1024);
-                    OnConnected();
+                    Connected?.Invoke(this, EventArgs.Empty);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    if (throwError)
-                    {
-                        throw;
-                    }
-                    return false;
+                    throw new Exception("Redis连接失败！", ex);
                 }
+                return IsConnected;
             }
-            return IsConnected;
         }
         
         public static KeyValuePair<string, int> SplitHost(string host)
@@ -126,33 +97,40 @@ namespace Aescr.Redis
 
             return new KeyValuePair<string, int>(host, 6379);
         }
-        /// <summary>
-        /// 用来测试连接是否存活，或者测试延迟。
-        /// </summary>
-        /// <returns></returns>
-        public bool Ping()
+        public string[] SendCommands(params string[] cmds)
         {
-            try
+            lock (_lockSocket)
             {
-                return SendExpectedString("PING","AESCR")=="AESCR";
+                if (SendCommand("Multi").ToLower()=="ok")
+                {
+                    foreach (var cmd in cmds)
+                    {
+                        SendCommand(cmd);
+                    }
+                    var resp= SendCommand("Exec");
+                }
             }
-            catch
-            {
-                return false;
-            }
+            return Array.Empty<string>();
         }
-        public RedisResult SendCommand(RedisCommand command)
+        public string SendCommand(string cmd)
         {
-            return SendCommand(command.Cmd, command.Args);
+            var cSplit= cmd.Split(' ');
+            var args=cSplit.Where(x => string.IsNullOrWhiteSpace(x) == false).ToArray();
+            return SendCommand(args);
         }
-        public RedisResult SendCommand(string cmd, params string[] args)
+        public string SendCommand(string cmd,params string[] args)
         {
-            if (_exit == false)
+            string[] argStrings = new string[args.Length + 1];
+            argStrings[0] = cmd;
+            for (int i = 0; i < args.Length; i++)
             {
-                Connect();
+                argStrings[i+1] = args[i];
             }
-            string resp = "*" + (1 + args.Length) + Crlf;
-            resp += "$" + cmd.Length + Crlf + cmd + Crlf;
+            return SendCommand(argStrings);
+        }
+        public string SendCommand(string[] args)
+        {
+            string resp = "*" + args.Length + Crlf;
             foreach (string arg in args)
             {
                 string argStr = arg.Trim();
@@ -160,141 +138,55 @@ namespace Aescr.Redis
                 resp += "$" + argStrLength + Crlf + argStr + Crlf;
             }
             byte[] r = Encoding.GetBytes(resp);
-            lock (_lockObject)
+            lock (_lockSocket)
             {
+                Connect();
                 try
                 {
-                    _bstream.Write(r, 0, r.Length);
-                    _bstream.Flush();
+                    _socket.Send(r);
                 }
-                catch
+                catch(Exception ex)
                 {
-                    throw new Exception("SendCommand失败！");
+                    throw new Exception("发送redis 命令失败！", ex);
                 }
                 return Parse();
             }
-          
         }
-        public string[] SendMultipleCommands(params RedisCommand[] command)
-        {
-            lock (_lockObject)
-            {
-                if (!SendExpectedOk("Multi")) throw new Exception("SendMultipleCommands Multi返回预期值错误！");
-                foreach (var c in command)
-                {
-                    SendExpectedQueued(c.Cmd, c.Args);
-                }
-                return SendExpectedArray("Exec");
-            }
-        }
-        /// <summary>
-        /// 响应结果预期OK
-        /// </summary>
-        /// <returns></returns>
-        public bool SendExpectedOk(string cmd, params string[] args)
-        {
-            var resp = SendCommand(cmd, args);
-            return resp.Value?.ToUpper() == "OK";
-        }
-
-        /// <summary>
-        /// 响应结果预期整数
-        /// </summary>
-        /// <returns></returns>
-        public int SendExpectedInteger(string cmd, params string[] args)
-        {
-            var resp = SendCommand(cmd, args);
-            return Convert.ToInt32(resp.Value);
-        }
-        /// <summary>
-        /// 响应结果预期整数64
-        /// </summary>
-        /// <returns></returns>
-        public long SendExpectedInteger64(string cmd, params string[] args)
-        {
-            var resp = SendCommand(cmd, args);
-            return Convert.ToInt64(resp.Value);
-        }
-        /// <summary>
-        /// 响应结果预期整数
-        /// </summary>
-        /// <returns></returns>
-        public string SendExpectedString(string cmd, params string[] args)
-        {
-            var resp = SendCommand(cmd, args);
-            var result = resp.Value;
-            return result;
-        }
-
-        public string[] SendExpectedArray(string cmd, params string[] args)
-        {
-            var resp = SendCommand(cmd, args);
-            return JsonSerializer.Deserialize<string[]>(resp.Value);
-        }
-
-        public void SendExpectedQueued(string cmd, params string[] args)
-        {
-            var resp = SendCommand(cmd, args);
-            if (resp.Value?.ToUpper()== "QUEUED")
-            {
-                return ;
-            }
-            throw new Exception("预期值应该为Queued");
-        }
-
-    
-        public RedisResult Parse()
+      
+        public string Parse()
         {
             var c = (char)_bstream.ReadByte();
-            var redisAnswer = new RedisResult(c);
             switch (c)
             {
                 case '+':
-                    redisAnswer.Value = ReadLine();
-                    break;
+                    return ReadLine();
                 case ':':
-                    redisAnswer.Value = ReadLine();
-                    break;
+                    return ReadLine();
                 case '-':
-                    redisAnswer.Value = ReadLine();
-                    break;
+                    return ReadLine();
                 case '$':
                     var lenStr = ReadLine();
                     var len = Convert.ToInt32(lenStr);
-                    redisAnswer.AppendLine(lenStr);
                     if (len==-1)
                     {
-                        redisAnswer.Value = String.Empty;
-                        break;
+                        return null;
                     }
                     byte[] bytes = new byte[len];
                     _bstream.Read(bytes, 0, bytes.Length);
-                    redisAnswer.Value = Encoding.GetString(bytes);
-                    redisAnswer.AppendLine(redisAnswer.Value);
                     SkipLine();
-                    break;
-
+                    return Encoding.GetString(bytes);
                 case '*':
                     var parameterlenStr = ReadLine();
                     var parameterLen = Convert.ToInt32(parameterlenStr);
-                    redisAnswer.AppendLine(parameterlenStr);
-                    RedisResult[] redisAnswers = new RedisResult[parameterLen];
+                    StringBuilder redisAnswers = new StringBuilder();
                     for (int i = 0; i < parameterLen; i++)
                     {
-                        redisAnswers[i] = Parse();
-                        redisAnswer.AppendLine(redisAnswers[i].Source);
+                        redisAnswers.AppendLine(Parse());
                     }
-
-                    JsonSerializerOptions jsonSerializerOptions = new JsonSerializerOptions();
-                    jsonSerializerOptions.Encoder=JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
-                    redisAnswer.Value = JsonSerializer.Serialize(redisAnswers.Select(x => x.Value), jsonSerializerOptions);
-                    redisAnswer.NestedValue = redisAnswers;
-                    break;
+                    return redisAnswers.ToString();
                 default:
                     throw new Exception("未知类型匹配！");
             }
-
-            return redisAnswer;
         }
 
         private void SkipLine()
@@ -328,12 +220,12 @@ namespace Aescr.Redis
         {
             if (IsConnected)
             {
-                SendExpectedOk("Quit");
+                SendCommand("Quit");
             }
             _socket?.Dispose();
             _bstream?.Dispose();
+            _bstream = null;
             _socket = null;
-            _exit = true;
             return IsConnected;
         }
         protected virtual void Dispose(bool disposing)
@@ -348,40 +240,6 @@ namespace Aescr.Redis
         {
             Dispose(true);
             GC.SuppressFinalize(this);
-        }
-
-        public void Auth()
-        {
-            string auth = "ok";
-            if (!string.IsNullOrEmpty(_connection.Password))
-            {
-                auth = SendExpectedString("Auth", _connection.Password);
-            }
-            if (auth.ToLower()!="ok")
-            {
-                throw new Exception($"Redis认证失败！{auth}");
-            }
-        }
-
-        private void InitConnect()
-        {
-            Auth();
-            Select(_connection.Database);
-        }
-
-        public bool Select(int index)
-        {
-            var result = SendExpectedOk("Select", index.ToString());
-            if (result)
-            {
-                _connection.Database = index;
-            }
-            return result;
-        }
-        protected virtual void OnConnected()
-        {
-             InitConnect();
-             Connected?.Invoke(this, EventArgs.Empty);
         }
     }
 }

@@ -1,37 +1,12 @@
-﻿#region << 版 本 注 释 >>
-/*----------------------------------------------------------------
-// Copyright (C) 2017 单位 运管家
-// 版权所有。 
-//
-// 文件名：ConnectionStringBuilder
-// 文件功能描述：
-//
-// 
-// 创建者：名字 AESCR
-// 时间：2021/2/26 11:42:29
-//
-// 修改人：
-// 时间：
-// 修改说明：
-//
-// 修改人：
-// 时间：
-// 修改说明：
-//
-// 版本：V1.0.0
-//----------------------------------------------------------------*/
-#endregion
-
-using System;
+﻿using System;
 using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Aescr.Redis
 {
-    public class RedisConnection: WeightedRoundRobinServer
+    public class RedisConnection
     {
-        public new string Host { get; set; } = "127.0.0.1:6379";
-        public string Role { get; set; } 
+        public string Host = "127.0.0.1:6379";
         public bool Ssl { get; set; } = false;
         public string User { get; set; }
         public string Password { get; set; }
@@ -69,7 +44,6 @@ namespace Aescr.Redis
             if (MaxPoolSize != 100) sb.Append(",max pool size=").Append(MaxPoolSize);
             if (MinPoolSize != 1) sb.Append(",min pool size=").Append(MinPoolSize);
             if (Retry != 0) sb.Append(",retry=").Append(Retry);
-            if (!string.IsNullOrWhiteSpace(Role)) sb.Append(",role=").Append(Role);
             return sb.ToString();
         }
 
@@ -107,9 +81,7 @@ namespace Aescr.Redis
                     case "poolsize":
                     case "maxpoolsize": if (kv.Length > 1 && int.TryParse(kv[1].Trim(), out var maxPoolSize) && maxPoolSize > 0) ret.MaxPoolSize = maxPoolSize; break;
                     case "minpoolsize": if (kv.Length > 1 && int.TryParse(kv[1].Trim(), out var minPoolSize) && minPoolSize > 0) ret.MinPoolSize = minPoolSize; break;
-                    case "retry": if (kv.Length > 1 && int.TryParse(kv[1].Trim(), out var retry) && retry > 0) ret.Retry = retry; break;
-                    case "role":
-                        if (kv.Length > 1) ret.Role = kv[1].Trim();
+                    case "retry": if (kv.Length > 1 && int.TryParse(kv[1].Trim(), out var retry) && retry > 0) ret.Retry = retry; 
                         break;
                 }
             }

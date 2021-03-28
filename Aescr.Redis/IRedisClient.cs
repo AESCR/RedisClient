@@ -16,18 +16,6 @@ namespace Aescr.Redis
         /// <param name="prefix"></param>
         void SetPrefix(string prefix);
         /// <summary>
-        /// 通过雪花算法获取唯一Id
-        /// </summary>
-        /// <returns></returns>
-        long GetSnowflakeId();
-        /// <summary>
-        /// 自定义Redis命令
-        /// </summary>
-        /// <param name="cmd"></param>
-        /// <param name="args"></param>
-        /// <returns></returns>
-        RedisResult SendCommand(string cmd, params string[] args);
-        /// <summary>
         /// 添加redis字符串
         /// </summary>
         /// <param name="value">值</param>
@@ -851,9 +839,8 @@ namespace Aescr.Redis
         /// 用于检测给定的密码和配置文件中的密码是否相符
         /// </summary>
         /// <param name="password">密码</param>
-        /// <param name="throwError">抛出错误</param>
         /// <returns></returns>
-        bool Auth(string password, bool throwError = false);
+        bool Auth(string password);
 
         /// <summary>
         /// 于阻塞客户端命令一段时间（以毫秒计）。
@@ -1149,42 +1136,6 @@ namespace Aescr.Redis
         string ScriptLoad(string script);
 
         /// <summary>
-        /// 使用 Lua 解释器执行脚本。
-        /// </summary>
-        /// <param name="script">参数是一段 Lua 5.1 脚本程序。脚本不必(也不应该)定义为一个 Lua 函数。</param>
-        /// <param name="numkeys">用于指定键名参数的个数。</param>
-        /// <param name="keys">键名</param>
-        /// <param name="args"> 附加参数，在 Lua 中通过全局变量 ARGV 数组访问，访问的形式和 KEYS 变量类似( ARGV[1] 、 ARGV[2] ，诸如此类)。</param>
-        /// <returns></returns>
-        string[] Eval(string script, int numkeys, string[] keys, string[] args = null);
-
-        /// <summary>
-        /// 根据给定的 sha1 校验码，执行缓存在服务器中的脚本。
-        /// </summary>
-        /// <param name="sha1"> SHA1 校验和</param>
-        /// <param name="numkeys">用于指定键名参数的个数。</param>
-        /// <param name="keys">键名</param>
-        /// <param name="args"> 附加参数，在 Lua 中通过全局变量 ARGV 数组访问，访问的形式和 KEYS 变量类似( ARGV[1] 、 ARGV[2] ，诸如此类)。</param>
-        /// <returns></returns>
-        string[] EvalSha(string sha1, int numkeys, string[] keys, string[] args = null);
-
-        /// <summary>
-        /// 用于校验指定的脚本是否已经被保存在缓存当中。
-        /// </summary>
-        /// <param name="sha1"> SHA1 校验和</param>
-        /// <param name="numkeys">用于指定键名参数的个数。</param>
-        /// <param name="keys">键名</param>
-        /// <param name="args"> 附加参数，在 Lua 中通过全局变量 ARGV 数组访问，访问的形式和 KEYS 变量类似( ARGV[1] 、 ARGV[2] ，诸如此类)。</param>
-        /// <returns>一个列表，包含 0 和 1 ，前者表示脚本不存在于缓存，后者表示脚本已经在缓存里面了。</returns>
-        string[] ScriptExists(string sha1, int numkeys, string[] keys, string[] args = null);
-
-        /// <summary>
-        /// 用于清除所有 Lua 脚本缓存。
-        /// </summary>
-        /// <returns>总是返回 OK</returns>
-        string ScriptFlush();
-
-        /// <summary>
         /// 用于执行所有事务块内的命令
         /// </summary>
         /// <returns>事务块内所有命令的返回值，按命令执行的先后顺序排列。 当操作被打断时，返回空值 nil 。</returns>
@@ -1250,7 +1201,7 @@ namespace Aescr.Redis
         /// </summary>
         /// <param name="channel">频道</param>
         /// <returns>这个命令在不同的客户端中有不同的表现。</returns>
-        RedisResult Unsubscribe(params string[] channel);
+        string Unsubscribe(params string[] channel);
 
         /// <summary>
         /// 用于订阅给定的一个或多个频道的信息。
@@ -1270,7 +1221,7 @@ namespace Aescr.Redis
         /// </summary>
         /// <param name="pattern">频道</param>
         /// <returns>这个命令在不同的客户端中有不同的表现。</returns>
-        RedisResult PunSubscribe(string pattern);
+        string PunSubscribe(string pattern);
 
         /// <summary>
         /// 用于将信息发送到指定的频道。

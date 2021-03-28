@@ -9,7 +9,7 @@ namespace Aescr.Redis
     /// </summary>
     public class WeightedRoundRobinServer
     {
-        public string Host;
+        public string Host= "127.0.0.1:6379";
         public int Weight=1;
     }
     /// <summary>
