@@ -6,10 +6,10 @@ namespace Aescr.Redis
     public interface IRedisClient : IDisposable
     {
         #region 自定义命令
-        /// <summary>
+        /*/// <summary>
         /// 自动配置主从关系
         /// </summary>
-        void AutoMasterSlave();
+        void AutoMasterSlave();*/
         /// <summary>
         /// 设置Key前缀
         /// </summary>
@@ -1208,7 +1208,7 @@ namespace Aescr.Redis
         /// </summary>
         /// <param name="channel">频道</param>
         /// <returns>接收到的信息</returns>
-        string Subscribe(params string[] channel);
+        RedisSubscribe Subscribe(params string[] channel);
 
         /// <summary>
         /// 用于查看订阅与发布系统状态，它由数个不同格式的子命令组成。

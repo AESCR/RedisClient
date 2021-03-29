@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace Aescr.Redis
 {
@@ -25,6 +26,7 @@ namespace Aescr.Redis
         private readonly object _lockSocket = new object();
         public event EventHandler Connected;
         public event EventHandler<RedisMessage> Recieved;
+        public event EventHandler<string> Subscribe;
         public RedisSocket(string host, bool ssl = false, Encoding encoding = null)
         {
             Encoding = encoding ?? Encoding.UTF8;
@@ -41,7 +43,7 @@ namespace Aescr.Redis
                 _socket ??= new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
                 {
                     NoDelay = true,
-                    ReceiveTimeout = (int)TimeSpan.FromSeconds(10).TotalMilliseconds,
+                    ReceiveTimeout = (int)TimeSpan.FromSeconds(30).TotalMilliseconds,
                     SendTimeout = (int)TimeSpan.FromSeconds(20).TotalMilliseconds,
                 };
                 if (IsConnected) return IsConnected;
@@ -94,11 +96,19 @@ namespace Aescr.Redis
 
             return new KeyValuePair<string, int>(host, 6379);
         }
+        public bool Auth(string password)
+        {
+            if (string.IsNullOrWhiteSpace(password) == false)
+            {
+                var auth = SendExpectedOk("Auth", password);
+                return !auth;
+            }
+            return SendExpectedOk("Auth", "Aescr");
+        }
         public string SendCommand(string cmd)
         {
-            var cSplit= cmd.Split(' ');
-            var args=cSplit.Where(x => string.IsNullOrWhiteSpace(x) == false).ToArray();
-            return SendCommand(args);
+            var cSplit= cmd.Trim().Split(' ',StringSplitOptions.RemoveEmptyEntries);
+            return SendCommand(cSplit);
         }
         public string SendCommand(string cmd,params string[] args)
         {
@@ -142,8 +152,47 @@ namespace Aescr.Redis
                 return result;
             }
         }
-      
-        public string Parse(ref StringBuilder rawBuilder)
+        public bool SendExpectedOk(string cmd, params string[] args)
+        {
+            var resp = SendCommand(cmd, args);
+            return resp?.ToUpper() == "OK";
+        }
+        public string SendExpectedString(string cmd, params string[] args)
+        {
+            return SendCommand(cmd, args);
+        }
+        public int SendExpectedInteger(string cmd, params string[] args)
+        {
+            var resp = SendCommand(cmd, args);
+            try
+            {
+                return Convert.ToInt32(resp);
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"返回意料之外的值:{resp}",e);
+            }
+           
+        }
+        public long SendExpectedInt64(string cmd, params string[] args)
+        {
+            var resp = SendCommand(cmd, args);
+            try
+            {
+                return Convert.ToInt64(resp);
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"返回意料之外的值:{resp}", e);
+            }
+          
+        }
+        public string[] SendExpectedArray(string cmd, params string[] args)
+        {
+            var resp = SendCommand(cmd, args);
+            return resp.Split("\r\n");
+        }
+        private string Parse(ref StringBuilder rawBuilder)
         {
             string resp;
             var c = (char)_bstream.ReadByte();
@@ -195,7 +244,6 @@ namespace Aescr.Redis
 
             return resp;
         }
-
         private void SkipLine()
         {
             int c;
@@ -223,12 +271,34 @@ namespace Aescr.Redis
             return sb.ToString();
         }
 
-        public bool Quit()
+        public void ReceiveSubscribe()
         {
-            if (IsConnected)
+            Connect();
+            while (true)
             {
-                SendCommand("Quit");
+                lock (_lockSocket)
+                {
+                    StringBuilder sb = new StringBuilder();
+                    int c;
+                    while ((c = _bstream.ReadByte()) != -1)
+                    {
+                        if (c == '\r')
+                            continue;
+                        if (c == '\n')
+                        {
+                            Subscribe?.Invoke(this, sb.ToString());
+                            sb.Clear();
+                            break;
+                        }
+
+                        sb.Append((char)c);
+                    }
+                }
             }
+        }
+        public bool Close()
+        {
+            _socket?.Close();
             _socket?.Dispose();
             _bstream?.Dispose();
             _bstream = null;
@@ -239,7 +309,7 @@ namespace Aescr.Redis
         {
             if (disposing)
             {
-                Quit();
+                Close();
             }
         }
 

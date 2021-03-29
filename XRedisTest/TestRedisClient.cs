@@ -24,6 +24,8 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Aescr.Redis;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -32,7 +34,7 @@ namespace XRedisTest
     [TestClass]
     public class TestRedisClient
     {
-        private readonly RedisClient redis = new RedisClient("120.26.161.113:6379,defaultDatabase=1");
+        private readonly RedisClient redis = new RedisClient("120.26.161.113:6379,defaultDatabase=0");
         [TestInitialize]
         public void TestInit()
         {
@@ -41,7 +43,7 @@ namespace XRedisTest
         [TestMethod]
         public void TestAutoMasterSlave()
         {
-            redis.AutoMasterSlave();
+            //redis.AutoMasterSlave();
         }
         [TestMethod]
         public void TestConnect()
@@ -167,15 +169,29 @@ namespace XRedisTest
             var x22 = redis.Ping("AESCR");
             var x= redis.Add("123");
         }
+        private static readonly ManualResetEvent manualResetEvent = new ManualResetEvent(false);
         [TestMethod]
         public void TestRecieved()
         {
             redis.Recieved += Redis_Recieved;
             var x1 = redis.Ping();
             var x12 = redis.Ping("AESCR");
-            var r = redis.Subscribe("mychannel");
-            var x2 = redis.Ping();
-            var x22 = redis.Ping("AESCR");
+            var redisSubscribe = redis.Subscribe("AESCR");
+            redisSubscribe.Subscribe += RedisSubscribe_Subscribe;
+            Task.Run(() =>
+            {
+                while (true)
+                {
+                    redis.Publish("AESCR", "123");
+                }
+            });
+            //redisSubscribe.Receive();
+            manualResetEvent.WaitOne();
+        }
+
+        private void RedisSubscribe_Subscribe(object sender, string e)
+        {
+            
         }
 
         private void Redis_Recieved(object sender, RedisMessage e)
