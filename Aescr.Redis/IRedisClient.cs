@@ -11,10 +11,11 @@ namespace Aescr.Redis
         /// </summary>
         void AutoMasterSlave();*/
         /// <summary>
-        /// 设置Key前缀
+        /// 发送自定义命令 
         /// </summary>
-        /// <param name="prefix"></param>
-        void SetPrefix(string prefix);
+        /// <param name="cmd">命令 例如 Auth 123</param>
+        /// <returns></returns>
+        RespData SendCommand(string cmd);
         /// <summary>
         /// 添加redis字符串
         /// </summary>
@@ -1201,14 +1202,14 @@ namespace Aescr.Redis
         /// </summary>
         /// <param name="channel">频道</param>
         /// <returns>这个命令在不同的客户端中有不同的表现。</returns>
-        string Unsubscribe(params string[] channel);
+        string[] Unsubscribe(params string[] channel);
 
         /// <summary>
         /// 用于订阅给定的一个或多个频道的信息。
         /// </summary>
         /// <param name="channel">频道</param>
         /// <returns>接收到的信息</returns>
-        RedisSubscribe Subscribe(params string[] channel);
+        string[] Subscribe(params string[] channel);
 
         /// <summary>
         /// 用于查看订阅与发布系统状态，它由数个不同格式的子命令组成。
@@ -1221,7 +1222,7 @@ namespace Aescr.Redis
         /// </summary>
         /// <param name="pattern">频道</param>
         /// <returns>这个命令在不同的客户端中有不同的表现。</returns>
-        string PunSubscribe(string pattern);
+        string[] PunSubscribe(string pattern);
 
         /// <summary>
         /// 用于将信息发送到指定的频道。

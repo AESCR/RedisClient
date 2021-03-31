@@ -173,31 +173,33 @@ namespace XRedisTest
         [TestMethod]
         public void TestRecieved()
         {
-            redis.Recieved += Redis_Recieved;
-            var x1 = redis.Ping();
-            var x12 = redis.Ping("AESCR");
-            var redisSubscribe = redis.Subscribe("AESCR");
-            redisSubscribe.Subscribe += RedisSubscribe_Subscribe;
-            Task.Run(() =>
+            var subscribe2 = redis.Subscribe("AESCR");
+            redis.SubscribeReceive += Redis_SubscribeReceive;
+            Assert.AreEqual("1", subscribe2[2]);
+            while (true)
             {
-                while (true)
+                var id = Snowflake.Instance().GetId().ToString();
+                var intxPublish = redis.Publish("AESCR", id);
+                lock (lockThis)
                 {
-                    redis.Publish("AESCR", "123");
+                    C++;
                 }
-            });
-            //redisSubscribe.Receive();
+            }
             manualResetEvent.WaitOne();
         }
 
-        private void RedisSubscribe_Subscribe(object sender, string e)
-        {
-            
-        }
+        private object lockThis = new object();
+        private int C = 0;
 
-        private void Redis_Recieved(object sender, RedisMessage e)
+        private void Redis_SubscribeReceive(string arg1, string arg2)
         {
-            
+            lock (lockThis)
+            {
+                C--;
+            }
+          
         }
+       
         #endregion
     }
 }

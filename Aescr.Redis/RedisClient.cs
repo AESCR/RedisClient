@@ -14,13 +14,19 @@ namespace Aescr.Redis
         public string Host => _connection?.Host?? "127.0.0.1";
         private  RedisSocket _redisSocket;
         private bool _disposedValue;
+        private RedisSubscribe _redisSubscribe;
         public int Database => _connection?.Database??0;
         private RedisConnection _connection;
-        public int Weight { get; set; } = 1;
-        public event EventHandler<RedisMessage> Recieved
+        public int Weight  => _connection?.Weight??0;
+        public event Action<string,string> SubscribeReceive
         {
-            add => _redisSocket.Recieved += value;
-            remove => _redisSocket.Recieved -= value;
+            add => _redisSubscribe.SubscribeReceive += value;
+            remove => _redisSubscribe.SubscribeReceive -= value;
+        } 
+        public event EventHandler<string> Message
+        {
+            add => _redisSocket.Message += value;
+            remove => _redisSocket.Message -= value;
         }
 
         public event EventHandler Connected
@@ -58,6 +64,7 @@ namespace Aescr.Redis
         private void Init(string connectionStr)
         {
             _connection = connectionStr;
+            _redisSubscribe = new RedisSubscribe(connectionStr);
             _redisSocket = new RedisSocket(_connection.Host, _connection.Ssl, _connection.Encoding);
             _redisSocket.Connected += redisSocket_Connected;
         }
@@ -114,6 +121,12 @@ namespace Aescr.Redis
             }
             return key;
         }
+
+        public RespData SendCommand(string cmd)
+        {
+            return _redisSocket.SendCommand(cmd);
+        }
+
         public string Add(string value, TimeSpan expiresIn)
         {
             var key = GetRandomKey();
@@ -137,7 +150,7 @@ namespace Aescr.Redis
         public string Type(string key)
         {
             var prefixKey = GetPrefixKey(key);
-            return _redisSocket.SendCommand(new []{ "Type", prefixKey });
+            return _redisSocket.SendExpectedString("Type", prefixKey);
         }
 
         public int PExpire(string key, long milliseconds)
@@ -1142,15 +1155,17 @@ namespace Aescr.Redis
             keys = GetPrefixKey(keys);
             return _redisSocket.SendExpectedInteger("PFCOUNT", keys);
         }
-        public string Unsubscribe(params string[] channel)
+        public string[] Unsubscribe(params string[] channel)
         {
-            return _redisSocket.SendCommand("Unsubscribe", channel);
+            if (_redisSubscribe==null)
+            {
+                throw new Exception("请先订阅频道！");
+            }
+            return _redisSubscribe.Unsubscribe(channel);
         }
-        public RedisSubscribe Subscribe(params string[] channel)
+        public string[] Subscribe(params string[] channel)
         {
-            //var r= _redisSocket.SendExpectedString("Subscribe", channel);
-            string conn = _connection;
-            return new RedisSubscribe(conn);
+            return _redisSubscribe.Subscribe(channel);
         }
 
         public string[] PubSub(string subCommand, params string[] argument)
@@ -1158,19 +1173,19 @@ namespace Aescr.Redis
             return _redisSocket.SendExpectedArray("PUBSUB", argument);
         }
 
-        public string PunSubscribe(string pattern)
+        public string[] PunSubscribe(string pattern)
         {
-            return _redisSocket.SendCommand("PunSubscribe", pattern);
+            return _redisSubscribe.PSubscribe(pattern);
         }
 
         public int Publish(string channel, string message)
         {
             return _redisSocket.SendExpectedInteger("Publish", channel, message);
-        }
+          }
 
         public string[] PSubscribe(params string[] pattern)
         {
-            return _redisSocket.SendExpectedArray("PSubscribe", pattern);
+            return _redisSubscribe.PSubscribe(pattern);
         }
 
         public string[] GeoHash(params string[] keys)
@@ -1243,6 +1258,7 @@ namespace Aescr.Redis
                 {
                     // TODO: 释放托管状态(托管对象)
                     _redisSocket?.Dispose();
+                    _redisSubscribe.Dispose();
                 }
                 // TODO: 释放未托管的资源(未托管的对象)并替代终结器
                 // TODO: 将大型字段设置为 null
