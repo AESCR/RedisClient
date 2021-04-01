@@ -173,33 +173,33 @@ namespace XRedisTest
         [TestMethod]
         public void TestRecieved()
         {
-            var subscribe2 = redis.Subscribe("AESCR");
             redis.SubscribeReceive += Redis_SubscribeReceive;
-            Assert.AreEqual("1", subscribe2[2]);
-            while (true)
+            Task.Run(() =>
             {
-                var id = Snowflake.Instance().GetId().ToString();
-                var intxPublish = redis.Publish("AESCR", id);
-                lock (lockThis)
+                while (true)
                 {
-                    C++;
+                    var id = Snowflake.Instance().GetId().ToString();
+                    var intxPublish = redis.Publish("AESCR", id);
+
                 }
-            }
+            });
+            redis.AddChannel("AESCR");
+            redis.RemoveChannel("AESCR");
             manualResetEvent.WaitOne();
         }
 
         private object lockThis = new object();
         private int C = 0;
 
-        private void Redis_SubscribeReceive(string arg1, string arg2)
+        private void Redis_SubscribeReceive(string[] msg)
         {
-            lock (lockThis)
-            {
-                C--;
-            }
-          
+            
         }
-       
+        [TestMethod]
+        public void TestSetPassword()
+        {
+            redis.SetPassword("AESCR");
+        }
         #endregion
     }
 }

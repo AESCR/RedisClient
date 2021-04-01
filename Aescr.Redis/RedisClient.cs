@@ -18,7 +18,7 @@ namespace Aescr.Redis
         public int Database => _connection?.Database??0;
         private RedisConnection _connection;
         public int Weight  => _connection?.Weight??0;
-        public event Action<string,string> SubscribeReceive
+        public event Action<string[]> SubscribeReceive
         {
             add => _redisSubscribe.SubscribeReceive += value;
             remove => _redisSubscribe.SubscribeReceive -= value;
@@ -120,6 +120,17 @@ namespace Aescr.Redis
                 return str;
             }
             return key;
+        }
+
+        public void AddChannel(params string[] channel)
+        {
+            _redisSubscribe.AddChannel(channel);
+            _redisSubscribe.ReceiveEnabled = true;
+        }
+
+        public void RemoveChannel(params string[] channel)
+        {
+            _redisSubscribe.RemoveChannel(channel);
         }
 
         public RespData SendCommand(string cmd)

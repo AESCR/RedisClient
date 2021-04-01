@@ -11,6 +11,16 @@ namespace Aescr.Redis
         /// </summary>
         void AutoMasterSlave();*/
         /// <summary>
+        /// 订阅频道
+        /// </summary>
+        /// <param name="channel"></param>
+        void AddChannel(params string[] channel);
+        /// <summary>
+        /// 取消订阅
+        /// </summary>
+        /// <param name="channel"></param>
+        void RemoveChannel(params string[] channel);
+        /// <summary>
         /// 发送自定义命令 
         /// </summary>
         /// <param name="cmd">命令 例如 Auth 123</param>
