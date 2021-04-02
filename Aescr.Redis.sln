@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30711.63
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestRedis", "XRedisTest\TestRedis.csproj", "{BB345ECB-4560-4EE6-91D6-467F64544053}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestRedis", "TestRedis\TestRedis.csproj", "{BB345ECB-4560-4EE6-91D6-467F64544053}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Aescr.Redis", "Aescr.Redis\Aescr.Redis.csproj", "{B3D324C4-7263-476E-9F2A-87D3386102AA}"
 EndProject
