@@ -3,8 +3,32 @@ using System.Collections.Generic;
 
 namespace Aescr.Redis
 {
-    public interface IRedisClient : IMemoryCache, IDisposable
+    public interface IRedisClient :  IDisposable
     {
+        /// <summary>
+        /// 设置缓存的值
+        /// </summary>
+        /// <param name="value">字符串</param>
+        /// <returns></returns>
+        string AddCache(string value);
+        /// <summary>
+        /// 设置缓存的值
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        string AddCache(IEnumerable<string> value);
+        /// <summary>
+        /// 设置缓存的值
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        string AddCache(Dictionary<string, string> value);
+        /// <summary>
+        /// 获取缓存
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        string GetCache(string key);
         #region 自定义命令
         /*/// <summary>
         /// 自动配置主从关系
