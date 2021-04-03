@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.Json;
 
 namespace Aescr.Redis
 {
@@ -1289,6 +1290,31 @@ namespace Aescr.Redis
             // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
+        }
+
+        public string AddCache(string value)
+        {
+            return Add(value);
+        }
+
+        public string AddCache(IEnumerable<string> value)
+        {
+            var key = GetRandomKey();
+            var valList= value.ToArray();
+            RPush(key, valList);
+            return key;
+        }
+
+        public string AddCache(Dictionary<string, string> value)
+        {
+            var rKey = GetRandomKey();
+            return HmSet(rKey, value);
+        }
+
+        public string GetCache(string key)
+        {
+            key= GetPrefixKey(key);
+            return Get(key);
         }
     }
 }

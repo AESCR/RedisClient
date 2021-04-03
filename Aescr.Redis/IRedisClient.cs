@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Aescr.Redis
 {
-    public interface IRedisClient : IDisposable
+    public interface IRedisClient : IMemoryCache, IDisposable
     {
         #region 自定义命令
         /*/// <summary>
