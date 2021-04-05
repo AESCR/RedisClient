@@ -104,6 +104,19 @@ namespace Aescr.Redis
             }
             return SendExpectedOk("Auth", "Aescr");
         }
+        public RespData SendMultiCommand(params string[] cmds)
+        {
+            lock (_lockSocket)
+            {
+                if (!SendExpectedOk("MULTI")) throw new Exception("事务开启失败！");
+                foreach (string cmd in cmds)
+                {
+                    SendExpectedString(cmd);
+                }
+                var result = SendCommand("Exec");
+                return result;
+            }
+        }
         public RespData SendCommand(string cmd)
         {
             var cSplit= cmd.Trim().Split(' ',StringSplitOptions.RemoveEmptyEntries);

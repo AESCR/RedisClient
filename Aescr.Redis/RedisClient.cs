@@ -74,15 +74,6 @@ namespace Aescr.Redis
             Auth(_connection.Password);
             Select(_connection.Database);
         }
-        /*public void AutoMasterSlave()
-        {
-            SlaveOf();
-            var par = _slaveClients.AsParallel();
-            par.ForAll(@this =>
-            {
-                @this.SlaveOf(Host,_connection.Password);
-            });
-        }*/
         public bool Connect()
         {
             return _redisSocket.Connect();
@@ -141,12 +132,8 @@ namespace Aescr.Redis
 
         public string Add(string value, TimeSpan expiresIn)
         {
-            var key = GetRandomKey();
-            if (!SetNx(key, value)) throw new Exception($"添加Add失败！Key:{key}");
-            if (expiresIn != TimeSpan.Zero)
-            {
-                Expire(key, expiresIn.Seconds);
-            }
+            var key = Add(value);
+            Expire(key, expiresIn.Seconds);
             return key;
         }
         public string Add(string value)
