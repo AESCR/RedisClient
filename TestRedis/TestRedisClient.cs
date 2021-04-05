@@ -34,7 +34,7 @@ namespace XRedisTest
     [TestClass]
     public class TestRedisClient
     {
-        private readonly RedisClient redis = new RedisClient("120.26.161.113:6379,defaultDatabase=0");
+        private readonly RedisClient redis = new RedisClient("120.26.161.113:6379,defaultDatabase=0,password=AESCR");
         [TestInitialize]
         public void TestInit()
         {
@@ -173,23 +173,27 @@ namespace XRedisTest
         [TestMethod]
         public void TestRecieved()
         {
-            redis.SubscribeReceive += Redis_SubscribeReceive;
             Task.Run(() =>
             {
                 while (true)
                 {
                     var id = Snowflake.Instance().GetId().ToString();
-                    var intxPublish = redis.Publish("AESCR", id);
-
+                    //var intxPublish = redis.Publish("AESCR", id);
+                    redis.Add(id, TimeSpan.FromSeconds(1));
                 }
             });
-            redis.AddChannel("AESCR");
-            redis.RemoveChannel("AESCR");
+            RedisSubscribe redisSubscribe = new RedisSubscribe("120.26.161.113:6379,defaultDatabase=0,password=AESCR");
+            redisSubscribe.KeyExpiredListener();
+            redisSubscribe.SubscribeReceive += Redis_SubscribeReceive;
+            Task.Run(() =>
+            {
+                while (true)
+                {
+                    var x = redisSubscribe.PSubscribe("__keyevent@0__:expired");
+                }
+            });
             manualResetEvent.WaitOne();
         }
-
-        private object lockThis = new object();
-        private int C = 0;
 
         private void Redis_SubscribeReceive(string[] msg)
         {

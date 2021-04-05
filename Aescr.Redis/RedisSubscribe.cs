@@ -42,7 +42,14 @@ namespace Aescr.Redis
         public event Action<string[]> SubscribeReceive;
         private readonly List<string> _channel = new();
         private readonly System.Threading.Timer _receiveTimer;
-
+        /// <summary>
+        /// 订阅key过期事件监听
+        /// </summary>
+        public void KeyExpiredListener()
+        {
+            var status= _redisSocket.SendCommand("CONFIG SET notify-keyspace-events Ex");
+            AddChannel($"__keyevent@{Database}__:expired");
+        }
         public void Reload()
         {
             if (_channel.Count==0)
@@ -64,10 +71,12 @@ namespace Aescr.Redis
             _connection = connection;
             _redisSocket = new RedisSocket(_connection.Host, _connection.Ssl, _connection.Encoding);
             _redisSocket.Connected += redisSocket_Connected;
-
             _receiveTimer = new Timer(ReceiveSubscribe, _channel, Timeout.Infinite, Speed);
         }
-
+        /// <summary>
+        /// 订阅频道
+        /// </summary>
+        /// <param name="channels"></param>
         public void AddChannel(params string[] channels)
         {
             foreach (var cl in channels)
@@ -77,7 +86,12 @@ namespace Aescr.Redis
                     _channel.Add(cl);
                 }
             }
+            ReceiveEnabled = _channel.Count>0;
         }
+        /// <summary>
+        /// 移除的订阅频道
+        /// </summary>
+        /// <param name="channels"></param>
         public void RemoveChannel(params string[] channels)
         {
             foreach (var cl in channels)
@@ -87,6 +101,7 @@ namespace Aescr.Redis
                     _channel.Remove(cl);
                 }
             }
+            ReceiveEnabled = _channel.Count > 0;
         }
         private void ReceiveSubscribe(object channel)
         {
@@ -108,28 +123,56 @@ namespace Aescr.Redis
         }
         public string[] PSubscribe(params string[] channel)
         {
+            if (channel == null || channel.Length == 0)
+            {
+                channel = _channel.ToArray();
+                if (channel.Length==0)
+                {
+                    throw new Exception("请先订阅频道");
+                }
+            }
             AddChannel(channel);
             return _redisSocket.SendExpectedArray("PSUBSCRIBE", channel);
         }
-        public string[] Subscribe(List<string> channel)
+        private string[] Subscribe(List<string> channel)
         {
             return Subscribe(channel.ToArray());
         }
+        /// <summary>
+        /// 订阅频道
+        /// </summary>
+        /// <param name="channel"></param>
+        /// <returns></returns>
         public string[] Subscribe(params string[] channel)
         {
+            if (channel==null||channel.Length==0)
+            {
+                channel = _channel.ToArray();
+                if (channel.Length == 0)
+                {
+                    throw new Exception("请先订阅频道");
+                }
+            }
             AddChannel(channel);
             return _redisSocket.SendExpectedArray("SUBSCRIBE", channel);
         }
+        /// <summary>
+        /// 取消订阅
+        /// </summary>
+        /// <param name="channel"></param>
+        /// <returns></returns>
         public string[] Unsubscribe(params string[] channel)
         {
             RemoveChannel(channel);
             return _redisSocket.SendExpectedArray("UNSUBSCRIBE", channel);
         }
+        /// <summary>
+        /// 取消全部订阅
+        /// </summary>
         public void Close()
         {
             Unsubscribe(_channel.ToArray());
         }
-
         private void redisSocket_Connected(object sender, System.EventArgs e)
         {
             _redisSocket.Auth(_connection.Password);
@@ -140,6 +183,7 @@ namespace Aescr.Redis
         {
             if (disposing)
             {
+                Close();
                 _redisSocket?.Dispose();
             }
         }
