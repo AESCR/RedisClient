@@ -9,33 +9,33 @@ namespace Aescr.Redis
     /// </summary>
     public class RespData
     {
-        public  Encoding Encoding { get; private set; } = Encoding.UTF8;
+        public  static Encoding Encoding { get; private set; } = Encoding.UTF8;
         private const string Crlf = "\r\n";
         private  char _responseType;
         private  string _respStrings;
-        private readonly List<RespData> _bulkRespData=new();
-        public void AddBulkResp(RespData respData)
+        public bool Succeed
         {
-            _bulkRespData.Add(respData);
+            get
+            {
+                return _responseType switch
+                {
+                    '-' => false,
+                    _ => true
+                };
+            }
         }
 
-        public new string GetType()
+        public string GetRespType()
         {
-            switch (_responseType)
+            return _responseType switch
             {
-                case '+':
-                    return "简单字符串";
-                case ':':
-                    return "错误信息";
-                case '-':
-                    return "整数";
-                case '$':
-                    return "大容量字符串";
-                case '*':
-                    return "数组";
-                default:
-                    return "未知类型匹配！";
-            }
+                '+' => "简单字符串",
+                ':' => "错误信息",
+                '-' => "整数",
+                '$' => "大容量字符串",
+                '*' => "数组",
+                _ => "未知类型匹配！"
+            };
         }
         public RespData()
         {
@@ -56,48 +56,16 @@ namespace Aescr.Redis
             }
             return resp;
         }
-        public string Request(params string[] args)
+        public static string GetRequest(params string[] args)
         {
             string resp = "*" + args.Length + Crlf;
             foreach (string arg in args)
             {
                 string argStr = arg.Trim();
-                int argStrLength = Encoding.GetByteCount(argStr);
+                int argStrLength =argStr.Length;
                 resp += "$" + argStrLength + Crlf + argStr + Crlf;
             }
             return resp;
-        }
-        public string Response()
-        {
-            StringBuilder stringBuilder = new StringBuilder(_responseType);
-            switch (_responseType)
-            {
-                case '+':
-                case ':':
-                case '-':
-                    stringBuilder.AppendLine(_respStrings);
-                    break;
-                case '$':
-                    if (_respStrings==null)
-                    {
-                        stringBuilder.AppendLine("-1");
-                        break;
-                    }
-                    stringBuilder.AppendLine(":" + _respStrings.Length.ToString());
-                    stringBuilder.AppendLine(_respStrings);
-                    break;
-                case '*':
-                    var parameter = _respStrings.Split("\r\n");
-                    stringBuilder.AppendLine(":" + parameter.Length);;
-                    foreach (var respData in _bulkRespData)
-                    {
-                        stringBuilder.AppendLine(respData.Response());
-                    }
-                    break;
-                default:
-                    throw new Exception("未知类型匹配！");
-            }
-            return stringBuilder.ToString();
         }
         public bool ResponseOk()
         {

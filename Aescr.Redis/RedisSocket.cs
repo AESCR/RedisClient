@@ -15,7 +15,6 @@ namespace Aescr.Redis
 {
     public class RedisSocket : IDisposable
     {
-        private const string Crlf = "\r\n";
         private Socket _socket;
         private BufferedStream _bstream;
         public bool IsConnected => _socket?.Connected ?? false;
@@ -134,15 +133,8 @@ namespace Aescr.Redis
         }
         public RespData SendCommand(string[] args)
         {
-            string cmd = string.Empty;
-            string resp = "*" + args.Length + Crlf;
-            foreach (string arg in args)
-            {
-                string argStr = arg.Trim();
-                int argStrLength = Encoding.GetByteCount(argStr);
-                resp += "$" + argStrLength + Crlf + argStr + Crlf;
-                cmd += " " + argStr;
-            }
+            string cmd = RespData.GetCommand(args);
+            string resp = RespData.GetRequest(args);
             byte[] r = Encoding.GetBytes(resp);
             RespData result;
             lock (_lockSocket)
@@ -219,7 +211,6 @@ namespace Aescr.Redis
                     {
                         var r = Parse();
                         redisAnswers.AppendLine(r.ResponseString());
-                        respData.AddBulkResp(r);
                     }
                     resp = redisAnswers.ToString();
                     break;
