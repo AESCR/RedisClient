@@ -21,7 +21,6 @@ namespace Aescr.Redis
         public int MaxPoolSize { get; set; } = 100;
         public int MinPoolSize { get; set; } = 1;
         public int Retry { get; set; } = 0;
-        public int Weight { get; set; } = 1;
 
         public static implicit operator RedisConnection(string connectionString) => Parse(connectionString);
         public static implicit operator string(RedisConnection connectionString) => connectionString.ToString();
@@ -46,7 +45,6 @@ namespace Aescr.Redis
             if (MaxPoolSize != 100) sb.Append(",max pool size=").Append(MaxPoolSize);
             if (MinPoolSize != 1) sb.Append(",min pool size=").Append(MinPoolSize);
             if (Retry != 0) sb.Append(",retry=").Append(Retry);
-            if (Weight != 1) sb.Append(",weight=").Append(Weight);
             return sb.ToString();
         }
 
@@ -85,9 +83,6 @@ namespace Aescr.Redis
                     case "maxpoolsize": if (kv.Length > 1 && int.TryParse(kv[1].Trim(), out var maxPoolSize) && maxPoolSize > 0) ret.MaxPoolSize = maxPoolSize; break;
                     case "minpoolsize": if (kv.Length > 1 && int.TryParse(kv[1].Trim(), out var minPoolSize) && minPoolSize > 0) ret.MinPoolSize = minPoolSize; break;
                     case "retry": if (kv.Length > 1 && int.TryParse(kv[1].Trim(), out var retry) && retry > 0) ret.Retry = retry; 
-                        break;
-                    case "weight":
-                        if (kv.Length > 1 && int.TryParse(kv[1].Trim(), out var weight) && weight > 0) ret.Weight = weight;
                         break;
                 }
             }

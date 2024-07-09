@@ -38,6 +38,7 @@ namespace Aescr.Redis
             if (IsConnected) return IsConnected;
             lock (_lockSocket)
             {
+                if (IsConnected) return IsConnected;
                 _socket ??= new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
                 {
                     NoDelay = true,
@@ -55,6 +56,7 @@ namespace Aescr.Redis
                 {
                     throw new Exception("Redis连接失败！", ex);
                 }
+
                 return IsConnected;
             }
         }
@@ -133,8 +135,8 @@ namespace Aescr.Redis
         }
         public RespData SendCommand(string[] args)
         {
-            string cmd = RespData.GetCommand(args);
-            string resp = RespData.GetRequest(args);
+            string cmd = JoinCommand(args);
+            string resp = RespCommand(args);
             byte[] r = Encoding.GetBytes(resp);
             RespData result;
             lock (_lockSocket)
@@ -148,10 +150,31 @@ namespace Aescr.Redis
                 {
                     throw new Exception($"发送redis命令:{cmd}失败！", ex);
                 }
-                result= Parse();
+                result= RespParse();
             }
             Message?.Invoke(this, $"发送命令{cmd},接受类型{result.GetType()},响应内容:{result.ResponseString()}");
             return result;
+        }
+        public static string JoinCommand(params string[] args)
+        {
+            string resp = string.Empty;
+            foreach (string arg in args)
+            {
+                string argStr = arg.Trim();
+                resp += " "+argStr;
+            }
+            return resp;
+        }
+        public static string RespCommand(params string[] args)
+        {
+            string resp = "*" + args.Length + RespData.Crlf;
+            foreach (string arg in args)
+            {
+                string argStr = arg.Trim();
+                int argStrLength =argStr.Length;
+                resp += "$" + argStrLength + RespData.Crlf + argStr + RespData.Crlf;
+            }
+            return resp;
         }
         public bool SendExpectedOk(string cmd, params string[] args)
         {
@@ -174,77 +197,86 @@ namespace Aescr.Redis
         {
             return SendCommand(cmd, args).ResponseArray();
         }
-        private RespData Parse()
+        private RespData RespParse()
         {
             var c = (char)_bstream.ReadByte();
-            var respData= new RespData();
-            string resp;
+            var respData= new RespData(c);
             switch (c)
             {
                 case '+':
-                    resp = ReadLine();
+                    respData.RespValue = ParseSimpleString();
                     break;
                 case ':':
-                    resp = ReadLine();
+                    respData.RespValue =ParseInteger().ToString();
                     break;
                 case '-':
-                    resp = ReadLine();
+                    respData.RespValue = ParseError();
                     break;
                 case '$':
-                    var lenStr = ReadLine();
-                    var len = Convert.ToInt32(lenStr);
-                    if (len==-1)
-                    {
-                        resp= null;
-                        break;
-                    }
-                    byte[] bytes = new byte[len];
-                    _bstream.Read(bytes, 0, bytes.Length);
-                    SkipLine();
-                    resp = Encoding.GetString(bytes);
+                    respData.RespValue  =ParseBulkString();
                     break;
                 case '*':
-                    var parameterlenStr = ReadLine();
-                    var parameterLen = Convert.ToInt32(parameterlenStr);
-                    StringBuilder redisAnswers = new StringBuilder();
-                    for (int i = 0; i < parameterLen; i++)
-                    {
-                        var r = Parse();
-                        redisAnswers.AppendLine(r.ResponseString());
-                    }
-                    resp = redisAnswers.ToString();
+                    respData.RespValue=ParseArray();
                     break;
                 default:
                     throw new Exception("未知类型匹配！");
             }
-            respData.SetResponse(c, resp);
             return respData;
         }
-        private void SkipLine()
-        {
-            int c;
-            while ((c = _bstream.ReadByte()) != -1)
-            {
-                if (c == '\r')
-                    continue;
-                if (c == '\n')
-                    break;
-            }
-        }
 
-        private string ReadLine()
+        private string ReadToRn()
         {
             StringBuilder sb = new StringBuilder();
-            int c;
-            while ((c = _bstream.ReadByte()) != -1)
-            {
-                if (c == '\r')
-                    continue;
-                if (c == '\n')
-                    break;
-                sb.Append((char)c);
-            }
+            int currentByte;
+            while ((currentByte = _bstream.ReadByte()) != '\r' && currentByte != -1)  
+            {  
+                sb.Append((char)currentByte);  
+            }  
+            // 验证下一个字节是否为 '\n' 严格检查协议
+            if (currentByte == '\r' && _bstream.ReadByte() != '\n')  
+            {  
+                throw new InvalidOperationException("Expected '\\n' after '\\r' for simple string termination");  
+            }  
             return sb.ToString();
+        }
+        private string ParseSimpleString()
+        {
+            return ReadToRn();
+        }
+
+        private string ParseError()
+        {
+            return ReadToRn();
+        }
+
+        private long ParseInteger()
+        {
+            var i= ReadToRn();
+            return Convert.ToInt64(i);
+        }
+
+        private string ParseBulkString()
+        {
+            var len = ParseInteger();
+            if (len==-1)
+                return null;
+            byte[] bytes = new byte[len];
+            _= _bstream.Read(bytes, 0, bytes.Length);
+            ReadToRn();
+            var resp = Encoding.GetString(bytes);
+            return resp;
+        }
+
+        private string ParseArray()
+        {
+            var parameterLen = ParseInteger();
+            StringBuilder redisAnswers = new StringBuilder();
+            for (int i = 0; i < parameterLen; i++)
+            {
+                var r = RespParse();
+                redisAnswers.Append(r.RespValue+RespData.Crlf);
+            }
+            return redisAnswers.ToString();
         }
         public bool Close()
         {

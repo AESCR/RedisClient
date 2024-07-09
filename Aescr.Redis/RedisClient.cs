@@ -7,23 +7,14 @@ using System.Text.Json;
 
 namespace Aescr.Redis
 {
-    public class RedisClient : IRedisClient
+    public class RedisClient : IRedisClient,IDisposable
     {
-        private static readonly Hashtable Hashtable = Hashtable.Synchronized(new Hashtable());
         public bool IsConnected => _redisSocket?.IsConnected ?? false;
         public string Prefix => _connection?.Prefix;
         public string Host => _connection?.Host?? "127.0.0.1";
         private  RedisSocket _redisSocket;
-        private bool _disposedValue;
-        private RedisSubscribe _redisSubscribe;
         public int Database => _connection?.Database??0;
         private RedisConnection _connection;
-        public int Weight  => _connection?.Weight??0;
-        public event Action<string[]> SubscribeReceive
-        {
-            add => _redisSubscribe.SubscribeReceive += value;
-            remove => _redisSubscribe.SubscribeReceive -= value;
-        } 
         public event EventHandler<string> Message
         {
             add => _redisSocket.Message += value;
@@ -35,37 +26,22 @@ namespace Aescr.Redis
             add => _redisSocket.Connected += value;
             remove => _redisSocket.Connected -= value;
         }
-        public static RedisClient GetSingle(string host)
-        {
-            RedisConnection rc = host;
-            if (!Hashtable.ContainsKey(rc.Host))
-            {
-                RedisClient redisClient = new RedisClient(rc);
-                Hashtable.Add(redisClient.Host, redisClient);
-                return redisClient;
-            }
-            else
-            {
-                return Hashtable[rc.Host] as RedisClient;
-            }
-        }
         public RedisClient(string connectionStr)
         {
-            Init(connectionStr);
+            InitRedisSocket(connectionStr);
         }
         public RedisClient(string ip, int port, string password)
         {
             _connection = new RedisConnection { Host = $"{ip}:{port}", Password = password };
-            Init(_connection);
+            InitRedisSocket(_connection);
         }
         public RedisClient() : this("127.0.0.1", 6379, "")
         {
 
         }
-        private void Init(string connectionStr)
+        private void InitRedisSocket(string connectionStr)
         {
             _connection = connectionStr;
-            _redisSubscribe = new RedisSubscribe(connectionStr);
             _redisSocket = new RedisSocket(_connection.Host, _connection.Ssl, _connection.Encoding);
             _redisSocket.Connected += redisSocket_Connected;
         }
@@ -82,7 +58,7 @@ namespace Aescr.Redis
         {
             _connection.Prefix = prefix;
         }
-        public string GetPrefixKey(string key)
+        private string GetPrefixKey(string key)
         {
             if (string.IsNullOrWhiteSpace(Prefix) ==false)
             {
@@ -97,7 +73,7 @@ namespace Aescr.Redis
 
         public string GetRandomKey()
         {
-            var key= Snowflake.Instance().GetId().ToString();
+            var key = Guid.NewGuid().ToString("N");
             return GetPrefixKey(key);
         }
         public string[] GetPrefixKey(string[] key)
@@ -113,27 +89,19 @@ namespace Aescr.Redis
             }
             return key;
         }
-
-        public void AddChannel(params string[] channel)
-        {
-            _redisSubscribe.AddChannel(channel);
-            _redisSubscribe.ReceiveEnabled = true;
-        }
-
-        public void RemoveChannel(params string[] channel)
-        {
-            _redisSubscribe.RemoveChannel(channel);
-        }
-
         public RespData SendCommand(string cmd)
         {
             return _redisSocket.SendCommand(cmd);
         }
-
+        public RespData SendCommand(string cmd,params string[] args)
+        {
+            return _redisSocket.SendCommand(cmd,args);
+        }
         public string Add(string value, TimeSpan expiresIn)
         {
             var key = Add(value);
-            Expire(key, expiresIn.Seconds);
+            if (expiresIn.Seconds>0)
+                Expire(key, expiresIn.Seconds);
             return key;
         }
         public string Add(string value)
@@ -843,9 +811,7 @@ namespace Aescr.Redis
         {
             var result = _redisSocket.SendExpectedOk("Select",index.ToString());
             if (result)
-            {
                 _connection.Database = index;
-            }
             return result;
         }
         public bool Ping()
@@ -873,12 +839,9 @@ namespace Aescr.Redis
 
         public bool Auth(string password)
         {
-            if (string.IsNullOrWhiteSpace(password)==false)
-            {
-                var auth = _redisSocket.SendExpectedOk("Auth", password);
-                return !auth;
-            }
-            return _redisSocket.SendExpectedOk("Auth", "Aescr"); ;
+            if (string.IsNullOrWhiteSpace(password)) return _redisSocket.SendExpectedOk("Auth");
+            var auth = _redisSocket.SendExpectedOk("Auth", password);
+            return auth;
         }
 
         public string Pause(long timeout)
@@ -1154,38 +1117,17 @@ namespace Aescr.Redis
             keys = GetPrefixKey(keys);
             return _redisSocket.SendExpectedInteger("PFCOUNT", keys);
         }
-        public string[] Unsubscribe(params string[] channel)
-        {
-            if (_redisSubscribe==null)
-            {
-                throw new Exception("请先订阅频道！");
-            }
-            return _redisSubscribe.Unsubscribe(channel);
-        }
-        public string[] Subscribe(params string[] channel)
-        {
-            return _redisSubscribe.Subscribe(channel);
-        }
-
         public string[] PubSub(string subCommand, params string[] argument)
         {
             return _redisSocket.SendExpectedArray("PUBSUB", argument);
         }
 
-        public string[] PunSubscribe(string pattern)
-        {
-            return _redisSubscribe.PSubscribe(pattern);
-        }
 
         public int Publish(string channel, string message)
         {
             return _redisSocket.SendExpectedInteger("Publish", channel, message);
           }
 
-        public string[] PSubscribe(params string[] pattern)
-        {
-            return _redisSubscribe.PSubscribe(pattern);
-        }
 
         public string[] GeoHash(params string[] keys)
         {
@@ -1251,17 +1193,10 @@ namespace Aescr.Redis
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!_disposedValue)
+            if (disposing)
             {
-                if (disposing)
-                {
-                    // TODO: 释放托管状态(托管对象)
-                    _redisSocket?.Dispose();
-                    _redisSubscribe.Dispose();
-                }
-                // TODO: 释放未托管的资源(未托管的对象)并替代终结器
-                // TODO: 将大型字段设置为 null
-                _disposedValue = true;
+                // TODO: 释放托管状态(托管对象)
+                _redisSocket?.Dispose();
             }
         }
 

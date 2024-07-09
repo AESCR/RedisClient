@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Aescr.Redis
 {
-    public class RedisSubscribe : IDisposable
+    public class RedisSubscribe :IRedisSubscribe, IDisposable
     {
         private int _speed = TimeSpan.FromMilliseconds(100).Milliseconds;
 
@@ -34,11 +34,9 @@ namespace Aescr.Redis
             }
         }
         private bool _timerEnabled=false;
-        private readonly RedisSocket _redisSocket;
-        private readonly RedisConnection _connection;
-        public bool IsConnected => _redisSocket?.IsConnected ?? false;
-        public string Host => _connection?.Host ?? "127.0.0.1";
-        public int Database => _connection?.Database ?? 0;
+        private readonly RedisClient _redisClient;
+        public bool IsConnected => _redisClient.IsConnected;
+        public string Host => _redisClient.Host;
         public event Action<string[]> SubscribeReceive;
         private readonly List<string> _channel = new();
         private readonly System.Threading.Timer _receiveTimer;
@@ -47,8 +45,8 @@ namespace Aescr.Redis
         /// </summary>
         public void KeyExpiredListener()
         {
-            var status= _redisSocket.SendCommand("CONFIG SET notify-keyspace-events Ex");
-            AddChannel($"__keyevent@{Database}__:expired");
+            var status= _redisClient.SendCommand("CONFIG SET notify-keyspace-events Ex");
+            AddChannel($"__keyevent@{_redisClient.Database}__:expired");
         }
         public void Reload()
         {
@@ -68,9 +66,7 @@ namespace Aescr.Redis
         }
         public RedisSubscribe(string connection)
         {
-            _connection = connection;
-            _redisSocket = new RedisSocket(_connection.Host, _connection.Ssl, _connection.Encoding);
-            _redisSocket.Connected += redisSocket_Connected;
+            _redisClient = new RedisClient(connection);
             _receiveTimer = new Timer(ReceiveSubscribe, _channel, Timeout.Infinite, Speed);
         }
         /// <summary>
@@ -121,6 +117,12 @@ namespace Aescr.Redis
                 ReceiveEnabled = false;
             }
         }
+
+        public int Publish(string channel, string message)
+        {
+            throw new NotImplementedException();
+        }
+
         public string[] PSubscribe(params string[] channel)
         {
             if (channel == null || channel.Length == 0)
@@ -132,7 +134,7 @@ namespace Aescr.Redis
                 }
             }
             AddChannel(channel);
-            return _redisSocket.SendExpectedArray("PSUBSCRIBE", channel);
+            return _redisClient.SendCommand("PSUBSCRIBE", channel).ResponseArray();
         }
         private string[] Subscribe(List<string> channel)
         {
@@ -154,17 +156,22 @@ namespace Aescr.Redis
                 }
             }
             AddChannel(channel);
-            return _redisSocket.SendExpectedArray("SUBSCRIBE", channel);
+            return _redisClient.SendCommand("SUBSCRIBE", channel).ResponseArray();
         }
-        /// <summary>
-        /// 取消订阅
-        /// </summary>
-        /// <param name="channel"></param>
-        /// <returns></returns>
+
+        public string[] PubSub(string subCommand, params string[] argument)
+        {
+            return _redisClient.SendCommand(subCommand, argument).ResponseArray();
+        }
+
+        public string[] PunSubscribe(string pattern)
+        {
+            return _redisClient.SendCommand(pattern).ResponseArray();
+        }
         public string[] Unsubscribe(params string[] channel)
         {
             RemoveChannel(channel);
-            return _redisSocket.SendExpectedArray("UNSUBSCRIBE", channel);
+            return _redisClient.SendCommand("UNSUBSCRIBE", channel).ResponseArray();
         }
         /// <summary>
         /// 取消全部订阅
@@ -173,18 +180,13 @@ namespace Aescr.Redis
         {
             Unsubscribe(_channel.ToArray());
         }
-        private void redisSocket_Connected(object sender, System.EventArgs e)
-        {
-            _redisSocket.Auth(_connection.Password);
-            _redisSocket.SendExpectedOk("SELECT", Database.ToString());
-        }
 
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)
             {
                 Close();
-                _redisSocket?.Dispose();
+                _redisClient?.Dispose();
             }
         }
 

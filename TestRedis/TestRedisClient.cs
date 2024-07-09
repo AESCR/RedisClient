@@ -34,7 +34,7 @@ namespace XRedisTest
     [TestClass]
     public class TestRedisClient
     {
-        private readonly RedisClient redis = new RedisClient("120.26.161.113:6379,defaultDatabase=0,password=AESCR");
+        private readonly RedisClient redis = new RedisClient("127.0.0.1",6379,"AESCR");
         [TestInitialize]
         public void TestInit()
         {
@@ -158,51 +158,6 @@ namespace XRedisTest
             var key = redis.RandomKey();
             redis.PExpire(key, TimeSpan.FromSeconds(10));
             var xx= redis.PTtl(key);
-        }
-        [TestMethod]
-        public void TestSubscribe()
-        {
-            var x1 = redis.Ping();
-            var x12 = redis.Ping("AESCR");
-            var r= redis.Subscribe("mychannel");
-            var x2= redis.Ping();
-            var x22 = redis.Ping("AESCR");
-            var x= redis.Add("123");
-        }
-        private static readonly ManualResetEvent manualResetEvent = new ManualResetEvent(false);
-        [TestMethod]
-        public void TestRecieved()
-        {
-            Task.Run(() =>
-            {
-                while (true)
-                {
-                    var id = Snowflake.Instance().GetId().ToString();
-                    //var intxPublish = redis.Publish("AESCR", id);
-                    redis.Add(id, TimeSpan.FromSeconds(1));
-                }
-            });
-            RedisSubscribe redisSubscribe = new RedisSubscribe("120.26.161.113:6379,defaultDatabase=0,password=AESCR");
-            redisSubscribe.KeyExpiredListener();
-            redisSubscribe.SubscribeReceive += Redis_SubscribeReceive;
-            Task.Run(() =>
-            {
-                while (true)
-                {
-                    var x = redisSubscribe.PSubscribe("__keyevent@0__:expired");
-                }
-            });
-            manualResetEvent.WaitOne();
-        }
-
-        private void Redis_SubscribeReceive(string[] msg)
-        {
-            
-        }
-        [TestMethod]
-        public void TestSetPassword()
-        {
-            redis.SetPassword("AESCR");
         }
         #endregion
     }
